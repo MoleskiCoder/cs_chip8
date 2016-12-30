@@ -61,6 +61,7 @@
 
         private void DrawGraphics()
         {
+            this.myChip8.DrawNeeded = false;
         }
     }
 }

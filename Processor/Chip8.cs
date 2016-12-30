@@ -48,6 +48,11 @@
             {
                 return this.drawNeeded;
             }
+
+            set
+            {
+                this.drawNeeded = value;
+            }
         }
 
         public void Initialize()
