@@ -1,11 +1,10 @@
 ﻿namespace Processor
 {
     using System;
-    using System.Diagnostics;
     using System.IO;
     using System.Media;
 
-    public class Chip8
+    public class Chip8 : IDisposable
     {
         private byte[] memory = new byte[4096];
         private byte[] v = new byte[16];
@@ -46,6 +45,8 @@
         private System.Random randomNumbers = new Random();
 
         private SoundPlayer soundPlayer = new SoundPlayer();
+
+        private bool disposed = false;
 
         public bool DrawNeeded
         {
@@ -111,7 +112,7 @@
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
 
-            pc += 2;
+            this.pc += 2;
 
             switch (opcode & 0xf000)
             {
@@ -123,7 +124,7 @@
                             break;
 
                         case 0xee:  // 00EE     Flow        return;
-                            this.pc = (short)(this.stack[--this.sp & 0xF]);
+                            this.pc = (short)this.stack[--this.sp & 0xF];
                             break;
 
                         default:
@@ -376,6 +377,25 @@
             this.UpdateSoundTimer();
         }
 
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    this.soundPlayer.Dispose();
+                }
+
+                this.disposed = true;
+            }
+        }
+
         private void UpdateDelayTimer()
         {
             if (this.delayTimer > 0)
@@ -408,16 +428,18 @@
 
         private void LoadRom(string path, ushort offset)
         {
-            var file = File.Open(path, FileMode.Open);
-            var size = file.Length;
-            if (size > this.memory.Length)
+            using (var file = File.Open(path, FileMode.Open))
             {
-                throw new InvalidOperationException("File is too large");
-            }
+                var size = file.Length;
+                if (size > this.memory.Length)
+                {
+                    throw new InvalidOperationException("File is too large");
+                }
 
-            using (var reader = new BinaryReader(file))
-            {
-                reader.Read(this.memory, offset, (int)size);
+                using (var reader = new BinaryReader(file, new System.Text.UTF8Encoding(), true))
+                {
+                    reader.Read(this.memory, offset, (int)size);
+                }
             }
         }
     }
