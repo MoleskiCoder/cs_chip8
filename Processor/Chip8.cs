@@ -98,6 +98,8 @@
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
 
+            pc += 2;
+
             switch (opcode & 0xf000)
             {
                 case 0x0000:    // Call
@@ -105,11 +107,10 @@
                     {
                         case 0xe0:  // 00E0     Display     disp_clear()
                             Array.Clear(this.gfx, 0, 64 * 32);
-                            this.pc += 2;
                             break;
 
                         case 0xee:  // 00EE     Flow        return;
-                            this.pc = (short)(this.stack[--this.sp & 0xF] + 2);
+                            this.pc = (short)(this.stack[--this.sp & 0xF]);
                             break;
 
                         default:
@@ -136,7 +137,6 @@
                         this.pc += 2;
                     }
 
-                    this.pc += 2;
                     break;
 
                 // Conditional
@@ -146,7 +146,6 @@
                         this.pc += 2;
                     }
 
-                    this.pc += 2;
                     break;
 
                 // Conditional
@@ -156,17 +155,14 @@
                         this.pc += 2;
                     }
 
-                    this.pc += 2;
                     break;
 
                 case 0x6000:        // 6XNN     Const       Vx = NN
                     this.v[x] = nn;
-                    this.pc += 2;
                     break;
 
                 case 0x7000:        // 7XNN     Const       Vx += NN
                     this.v[x] += nn;
-                    this.pc += 2;
                     break;
 
                 case 0x8000:
@@ -174,52 +170,43 @@
                     {
                         case 0x0:   // 8XY0     Assign      Vx=Vy
                             this.v[x] = this.v[y];
-                            this.pc += 2;
                             break;
 
                         case 0x1:   // 8XY1     BitOp       Vx=Vx|Vy
                             this.v[x] |= this.v[y];
-                            this.pc += 2;
                             break;
 
                         case 0x2:   // 8XY2     BitOp       Vx=Vx&Vy
                             this.v[x] &= this.v[y];
-                            this.pc += 2;
                             break;
 
                         case 0x3:   // 8XY3     BitOp       Vx=Vx^Vy
                             this.v[x] ^= this.v[y];
-                            this.pc += 2;
                             break;
 
                         case 0x4:   // 8XY4     Math        Vx += Vy
                             this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
                             this.v[x] += this.v[y];
-                            this.pc += 2;
                             break;
 
                         case 0x5:   // 8XY5     Math        Vx -= Vy
                             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 1 : 0);
                             this.v[x] -= this.v[y];
-                            this.pc += 2;
                             break;
 
                         case 0x6:   // 8XY6     Math        Vx >> 1
                             this.v[x] >>= 1;
                             this.v[0xf] = (byte)(this.v[x] & 0x1);
-                            this.pc += 2;
                             break;
 
                         case 0x7:   // 8XY7     Math        Vx=Vy-Vx
                             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 0 : 1);
                             this.v[x] = (byte)(this.v[y] - this.v[x]);
-                            this.pc += 2;
                             break;
 
                         case 0xe:   // 8XYE     Math        Vx << 1
                             this.v[0xf] = (byte)(this.v[x] & 0x80);
                             this.v[x] <<= 1;
-                            this.pc += 2;
                             break;
 
                         default:
@@ -237,7 +224,6 @@
                                 this.pc += 2;
                             }
 
-                            this.pc += 2;
                             break;
 
                         default:
@@ -248,7 +234,6 @@
 
                 case 0xa000:        // ANNN     MEM         I = NNN
                     this.i = nnn;
-                    this.pc += 2;
                     break;
 
                 case 0xB000:        // BNNN     Flow        PC=V0+NNN
@@ -257,7 +242,6 @@
 
                 case 0xc000:        // CXNN     Rand        Vx=rand()&NN
                     this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
-                    this.pc += 2;
                     break;
 
                 case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
@@ -287,7 +271,6 @@
                     }
 
                     this.drawNeeded = true;
-                    this.pc += 2;
                     break;
 
                 case 0xe000:
@@ -299,7 +282,6 @@
                                 this.pc += 2;
                             }
 
-                            this.pc += 2;
                             break;
 
                         case 0xa1:  // EXA1     KeyOp       if(key()!=Vx)
@@ -308,7 +290,6 @@
                                 this.pc += 2;
                             }
 
-                            this.pc += 2;
                             break;
 
                         default:
@@ -322,31 +303,25 @@
                     {
                         case 0x07:  // FX07     Timer       Vx = get_delay()
                             this.v[x] = this.delayTimer;
-                            this.pc += 2;
                             break;
 
                         case 0x0a:  // FX0A     KeyOp       Vx = get_key()
-                            this.pc += 2;
                             break;
 
                         case 0x15:  // FX15     Timer       delay_timer(Vx)
                             this.delayTimer = this.v[x];
-                            this.pc += 2;
                             break;
 
                         case 0x18:  // FX18     Sound       sound_timer(Vx)
                             this.soundTimer = this.v[x];
-                            this.pc += 2;
                             break;
 
                         case 0x1e:  // FX1E     Mem         I +=Vx
                             this.i += this.v[x];
-                            this.pc += 2;
                             break;
 
                         case 0x29:  // FX29     Mem         I=sprite_addr[Vx]
                             this.i = (short)(5 * this.v[x]);
-                            this.pc += 2;
                             break;
 
                         case 0x33:  // FX33     BCD
@@ -361,17 +336,14 @@
                                 this.memory[this.i + 2] = (byte)((content % 100) % 10);
                             }
 
-                            this.pc += 2;
                             break;
 
                         case 0x55:  // FX55     MEM         reg_dump(Vx,&I)
                             Array.Copy(this.v, 0, this.memory, this.i, x);
-                            this.pc += 2;
                             break;
 
                         case 0x65:  // FX65     MEM         reg_load(Vx,&I)
                             Array.Copy(this.memory, this.i, this.v, 0, x);
-                            this.pc += 2;
                             break;
 
                         default:
