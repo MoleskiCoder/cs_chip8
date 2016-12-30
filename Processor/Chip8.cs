@@ -279,17 +279,22 @@
 
                         for (int row = 0; row < height; ++row)
                         {
+                            var cellY = drawY + row;
                             var pixel = this.memory[this.i + row];
                             for (int column = 0; column < 8; ++column)
                             {
+                                var cellX = drawX + column;
                                 if ((pixel & (0x80 >> column)) != 0)
                                 {
-                                    if (this.graphics[drawX + column, drawY + row])
+                                    if ((cellX < ScreenWidth) && (cellY < ScreenHeight))
                                     {
-                                        this.v[0xF] = 1;
-                                    }
+                                        if (this.graphics[cellX, cellY])
+                                        {
+                                            this.v[0xf] = 1;
+                                        }
 
-                                    this.graphics[drawX + column, drawY + row] ^= true;
+                                        this.graphics[cellX, cellY] ^= true;
+                                    }
                                 }
                             }
                         }
