@@ -6,11 +6,14 @@
 
     public class Chip8 : IDisposable
     {
+        public static readonly int ScreenWidth = 64;
+        public static readonly int ScreenHeight = 32;
+
         private byte[] memory = new byte[4096];
         private byte[] v = new byte[16];
         private short i;
         private short pc;
-        private byte[] gfx = new byte[64 * 32];
+        private bool[] graphics = new bool[ScreenWidth * ScreenHeight];
         private byte delayTimer;
         private byte soundTimer;
         private ushort[] stack = new ushort[16];
@@ -61,6 +64,14 @@
             }
         }
 
+        public bool[] Graphics
+        {
+            get
+            {
+                return this.graphics;
+            }
+        }
+
         public void Initialize()
         {
             //// Initialize registers and memory once
@@ -70,7 +81,7 @@
             this.sp = 0;         // Reset stack pointer
 
             // Clear display
-            Array.Clear(this.gfx, 0, 64 * 32);
+            Array.Clear(this.graphics, 0, ScreenWidth * ScreenHeight);
 
             // Clear stack
             Array.Clear(this.stack, 0, 16);
@@ -120,7 +131,7 @@
                     switch (low)
                     {
                         case 0xe0:  // 00E0     Display     disp_clear()
-                            Array.Clear(this.gfx, 0, 64 * 32);
+                            Array.Clear(this.graphics, 0, ScreenWidth * ScreenHeight);
                             break;
 
                         case 0xee:  // 00EE     Flow        return;
@@ -272,13 +283,13 @@
                             {
                                 if ((pixel & (0x80 >> xline)) != 0)
                                 {
-                                    var cell = xcoord + xline + ((ycoord + yline) * 64);
-                                    if (this.gfx[cell] == 1)
+                                    var cell = xcoord + xline + ((ycoord + yline) * ScreenWidth);
+                                    if (this.graphics[cell])
                                     {
                                         this.v[0xF] = 1;
                                     }
 
-                                    this.gfx[cell] ^= 1;
+                                    this.graphics[cell] ^= true;
                                 }
                             }
                         }

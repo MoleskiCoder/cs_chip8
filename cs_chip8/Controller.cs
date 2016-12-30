@@ -1,67 +1,102 @@
-﻿namespace cs_chip8
+﻿namespace Emulator
 {
-    using System;
     using System.Timers;
+    using Microsoft.Xna.Framework;
+    using Microsoft.Xna.Framework.Graphics;
     using Processor;
 
-    class Controller
+    internal class Controller : Game
     {
+        private static readonly int PixelSize = 10;
+
         private Chip8 myChip8;
         private Timer jiffyTimer;
 
+        private GraphicsDeviceManager graphics;
+        private SpriteBatch spriteBatch;
+        private Texture2D pixel;
+
         public Controller()
         {
-            this.myChip8 = new Chip8();
             this.jiffyTimer = new Timer();
-        }
 
-        public void Emulate()
-        {
+            this.graphics = new GraphicsDeviceManager(this);
+            this.graphics.IsFullScreen = false;
+            this.graphics.PreferredBackBufferWidth = PixelSize * Chip8.ScreenWidth;
+            this.graphics.PreferredBackBufferHeight = PixelSize * Chip8.ScreenHeight;
+            this.graphics.ApplyChanges();
+
             this.jiffyTimer.Elapsed += this.JiffyTimer_Elapsed;
             this.jiffyTimer.Interval = 1000.0 / 60.0;
+        }
+
+        protected override void BeginRun()
+        {
             this.jiffyTimer.Start();
+        }
 
-            // Set up render system and register input callbacks
-            SetupGraphics();
-            SetupInput();
- 
-            // Initialize the Chip8 system and load the game into the memory  
-            myChip8.Initialize();
-            myChip8.LoadGame("PONG");
- 
-            // Emulation loop
-            for (;;)
+        protected override void LoadContent()
+        {
+            this.spriteBatch = new SpriteBatch(GraphicsDevice);
+
+            this.pixel = new Texture2D(GraphicsDevice, 1, 1);
+            this.pixel.SetData<Color>(new Color[] { Color.Black });
+
+            this.myChip8 = new Chip8();
+
+            this.myChip8.Initialize();
+            this.myChip8.LoadGame("PONG");
+        }
+
+        protected override void Update(GameTime gameTime)
+        {
+            this.myChip8.EmulateCycle();
+            base.Update(gameTime);
+        }
+            
+        protected override void Draw(GameTime gameTime)
+        {
+            if (this.myChip8.DrawNeeded)
             {
-                // Emulate one cycle
-                myChip8.EmulateCycle();
-
-                // If the draw flag is set, update the screen
-                if (myChip8.DrawNeeded)
+                try
                 {
-                    DrawGraphics();
+                    this.graphics.GraphicsDevice.Clear(Color.CornflowerBlue);
+                    this.Draw(this.spriteBatch);
                 }
- 
-                // Store key press state (Press and Release)
-                myChip8.SetKeys();	
+                finally
+                {
+                    this.myChip8.DrawNeeded = false;
+                }
+            }
+
+            base.Draw(gameTime);
+        }
+
+        private void Draw(SpriteBatch spriteBatch)
+        {
+            spriteBatch.Begin();
+            try
+            {
+                for (int y = 0; y < Chip8.ScreenHeight; y++)
+                {
+                    for (int x = 0; x < Chip8.ScreenWidth; x++)
+                    {
+                        if (this.myChip8.Graphics[x + (y * Chip8.ScreenHeight)])
+                        {
+                            spriteBatch.Draw(this.pixel, new Rectangle(x * PixelSize, y * PixelSize, PixelSize, PixelSize), Color.White);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                spriteBatch.End();
             }
         }
 
         private void JiffyTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             this.myChip8.UpdateTimers();
-        }
-
-        private void SetupGraphics()
-        {
-        }
-
-        private void SetupInput()
-        {
-        }
-
-        private void DrawGraphics()
-        {
-            this.myChip8.DrawNeeded = false;
         }
     }
 }
