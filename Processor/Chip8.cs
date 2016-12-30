@@ -3,6 +3,7 @@
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.Media;
 
     public class Chip8
     {
@@ -17,6 +18,8 @@
         private ushort sp;
 
         private bool drawNeeded;
+
+        private bool soundPlaying = false;
 
         private byte[] chip8FontSet =
         { 
@@ -41,6 +44,8 @@
         private byte[] key = new byte[16];
 
         private System.Random randomNumbers = new Random();
+
+        private SoundPlayer soundPlayer = new SoundPlayer();
 
         public bool DrawNeeded
         {
@@ -80,6 +85,9 @@
 
             // Reset timers
             this.delayTimer = this.soundTimer = 0;
+
+            // Sound
+            this.soundPlayer.SoundLocation = @"..\..\..\Sounds\beep.wav";
         }
 
         public void SetKeys()
@@ -380,12 +388,21 @@
         {
             if (this.soundTimer > 0)
             {
-                if (this.soundTimer == 1)
+                if (!this.soundPlaying)
                 {
-                    Debug.WriteLine("BEEP!");
+                    this.soundPlayer.PlayLooping();
+                    this.soundPlaying = true;
                 }
 
                 --this.soundTimer;
+            }
+            else
+            {
+                if (this.soundPlaying)
+                {
+                    this.soundPlayer.Stop();
+                    this.soundPlaying = false;
+                }
             }
         }
 
