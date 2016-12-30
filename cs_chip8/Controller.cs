@@ -11,7 +11,7 @@
         private static readonly int PixelSize = 10;
         private static readonly int FPS = 150;
 
-        private Chip8 myChip8;
+        private Chip8 processor;
         private Timer jiffyTimer;
 
         private GraphicsDeviceManager graphics;
@@ -46,21 +46,21 @@
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
             this.pixel.SetData<Color>(new Color[] { Color.Black });
 
-            this.myChip8 = new Chip8();
+            this.processor = new Chip8();
 
-            this.myChip8.Initialize();
-            this.myChip8.LoadGame("PONG");
+            this.processor.Initialise();
+            this.processor.LoadGame("PONG");
         }
 
         protected override void Update(GameTime gameTime)
         {
-            this.myChip8.EmulateCycle();
+            this.processor.EmulateCycle();
             base.Update(gameTime);
         }
             
         protected override void Draw(GameTime gameTime)
         {
-            if (this.myChip8.DrawNeeded)
+            if (this.processor.DrawNeeded)
             {
                 try
                 {
@@ -69,38 +69,38 @@
                 }
                 finally
                 {
-                    this.myChip8.DrawNeeded = false;
+                    this.processor.DrawNeeded = false;
                 }
             }
 
             base.Draw(gameTime);
         }
 
-        private void Draw(SpriteBatch spriteBatch)
+        private void Draw()
         {
-            spriteBatch.Begin();
+            this.spriteBatch.Begin();
             try
             {
                 for (int x = 0; x < Chip8.ScreenWidth; x++)
                 {
                     for (int y = 0; y < Chip8.ScreenHeight; y++)
                     {
-                        if (this.myChip8.Graphics[x, y])
+                        if (this.processor.Graphics[x, y])
                         {
-                            spriteBatch.Draw(this.pixel, new Rectangle(x * PixelSize, y * PixelSize, PixelSize, PixelSize), Color.White);
+                            this.spriteBatch.Draw(this.pixel, new Rectangle(x * PixelSize, y * PixelSize, PixelSize, PixelSize), Color.White);
                         }
                     }
                 }
             }
             finally
             {
-                spriteBatch.End();
+                this.spriteBatch.End();
             }
         }
 
         private void JiffyTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            this.myChip8.UpdateTimers();
+            this.processor.UpdateTimers();
         }
     }
 }

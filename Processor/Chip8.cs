@@ -72,7 +72,7 @@
             }
         }
 
-        public void Initialize()
+        public void Initialise()
         {
             //// Initialize registers and memory once
 
