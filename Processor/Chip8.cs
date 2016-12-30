@@ -13,7 +13,7 @@
         private byte[] v = new byte[16];
         private short i;
         private short pc;
-        private bool[] graphics = new bool[ScreenWidth * ScreenHeight];
+        private bool[,] graphics = new bool[ScreenWidth, ScreenHeight];
         private byte delayTimer;
         private byte soundTimer;
         private ushort[] stack = new ushort[16];
@@ -64,7 +64,7 @@
             }
         }
 
-        public bool[] Graphics
+        public bool[,] Graphics
         {
             get
             {
@@ -271,25 +271,25 @@
 
                 case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
                     {
-                        var xcoord = this.v[x];
-                        var ycoord = this.v[y];
+                        var drawX = this.v[x];
+                        var drawY = this.v[y];
                         var height = n;
 
-                        this.v[0xF] = 0;
-                        for (int yline = 0; yline < height; ++yline)
+                        this.v[0xf] = 0;
+
+                        for (int row = 0; row < height; ++row)
                         {
-                            var pixel = this.memory[this.i + yline];
-                            for (int xline = 0; xline < 8; ++xline)
+                            var pixel = this.memory[this.i + row];
+                            for (int column = 0; column < 8; ++column)
                             {
-                                if ((pixel & (0x80 >> xline)) != 0)
+                                if ((pixel & (0x80 >> column)) != 0)
                                 {
-                                    var cell = xcoord + xline + ((ycoord + yline) * ScreenWidth);
-                                    if (this.graphics[cell])
+                                    if (this.graphics[drawX + column, drawY + row])
                                     {
                                         this.v[0xF] = 1;
                                     }
 
-                                    this.graphics[cell] ^= true;
+                                    this.graphics[drawX + column, drawY + row] ^= true;
                                 }
                             }
                         }

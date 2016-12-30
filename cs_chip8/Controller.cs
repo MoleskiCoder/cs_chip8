@@ -1,5 +1,6 @@
 ﻿namespace Emulator
 {
+    using System;
     using System.Timers;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
@@ -8,6 +9,7 @@
     internal class Controller : Game
     {
         private static readonly int PixelSize = 10;
+        private static readonly int FPS = 150;
 
         private Chip8 myChip8;
         private Timer jiffyTimer;
@@ -28,6 +30,8 @@
 
             this.jiffyTimer.Elapsed += this.JiffyTimer_Elapsed;
             this.jiffyTimer.Interval = 1000.0 / 60.0;
+
+            TargetElapsedTime = TimeSpan.FromMilliseconds((double)((double)1000/(double)FPS));
         }
 
         protected override void BeginRun()
@@ -77,14 +81,12 @@
             spriteBatch.Begin();
             try
             {
-                for (int y = 0; y < Chip8.ScreenHeight; y++)
+                for (int x = 0; x < Chip8.ScreenWidth; x++)
                 {
-                    for (int x = 0; x < Chip8.ScreenWidth; x++)
+                    for (int y = 0; y < Chip8.ScreenHeight; y++)
                     {
-                        if (this.myChip8.Graphics[x + (y * Chip8.ScreenHeight)])
-                        {
+                        if (this.myChip8.Graphics[x,y])
                             spriteBatch.Draw(this.pixel, new Rectangle(x * PixelSize, y * PixelSize, PixelSize, PixelSize), Color.White);
-                        }
                     }
                 }
             }
