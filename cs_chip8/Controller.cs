@@ -65,7 +65,7 @@
                 try
                 {
                     this.graphics.GraphicsDevice.Clear(Color.CornflowerBlue);
-                    this.Draw(this.spriteBatch);
+                    this.Draw();
                 }
                 finally
                 {
