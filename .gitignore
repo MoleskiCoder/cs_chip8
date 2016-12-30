@@ -1,0 +1,16 @@
+bin/
+obj/
+
+.vs/
+
+*.swp
+*~
+
+StyleCop.cache
+
+*.psess
+
+*.csproj.user
+*.vsp
+
+*.log
