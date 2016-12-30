@@ -1,7 +1,5 @@
 ﻿namespace Emulator
 {
-    using System;
-    using System.Timers;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
     using Processor;
@@ -9,10 +7,8 @@
     internal class Controller : Game
     {
         private static readonly int PixelSize = 10;
-        private static readonly int FPS = 150;
 
         private Chip8 processor;
-        private Timer jiffyTimer;
 
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
@@ -20,23 +16,11 @@
 
         public Controller()
         {
-            this.jiffyTimer = new Timer();
-
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
             this.graphics.PreferredBackBufferWidth = PixelSize * Chip8.ScreenWidth;
             this.graphics.PreferredBackBufferHeight = PixelSize * Chip8.ScreenHeight;
             this.graphics.ApplyChanges();
-
-            this.jiffyTimer.Elapsed += this.JiffyTimer_Elapsed;
-            this.jiffyTimer.Interval = 1000.0 / 60.0;
-
-            this.TargetElapsedTime = TimeSpan.FromMilliseconds((double)((double)1000 / (double)FPS));
-        }
-
-        protected override void BeginRun()
-        {
-            this.jiffyTimer.Start();
         }
 
         protected override void LoadContent()
@@ -55,6 +39,9 @@
         protected override void Update(GameTime gameTime)
         {
             this.processor.Step();
+            this.processor.Step();
+            this.processor.Step();
+            this.processor.UpdateTimers();
             base.Update(gameTime);
         }
             
@@ -96,11 +83,6 @@
             {
                 this.spriteBatch.End();
             }
-        }
-
-        private void JiffyTimer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            this.processor.UpdateTimers();
         }
     }
 }
