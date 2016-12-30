@@ -31,7 +31,7 @@
             this.jiffyTimer.Elapsed += this.JiffyTimer_Elapsed;
             this.jiffyTimer.Interval = 1000.0 / 60.0;
 
-            TargetElapsedTime = TimeSpan.FromMilliseconds((double)((double)1000/(double)FPS));
+            this.TargetElapsedTime = TimeSpan.FromMilliseconds((double)((double)1000 / (double)FPS));
         }
 
         protected override void BeginRun()
@@ -85,8 +85,10 @@
                 {
                     for (int y = 0; y < Chip8.ScreenHeight; y++)
                     {
-                        if (this.myChip8.Graphics[x,y])
+                        if (this.myChip8.Graphics[x, y])
+                        {
                             spriteBatch.Draw(this.pixel, new Rectangle(x * PixelSize, y * PixelSize, PixelSize, PixelSize), Color.White);
+                        }
                     }
                 }
             }
