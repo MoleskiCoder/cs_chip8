@@ -3,6 +3,7 @@
     using System;
     using System.IO;
     using System.Media;
+    using Microsoft.Xna.Framework.Input;
 
     public class Chip8 : IDisposable
     {
@@ -43,7 +44,29 @@
           0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         };
 
-        private byte[] key = new byte[16];
+        // CHIP-8 Keyboard layout
+        //  1   2   3   C
+        //  4   5   6   D
+        //  7   8   9   E
+        //  A   0   B   F
+        private Keys[] key = new Keys[]
+        {
+                        Keys.X,
+                
+            Keys.D1,    Keys.D2,    Keys.D3,
+            Keys.Q,     Keys.W,     Keys.E,
+            Keys.A,     Keys.S,     Keys.D,
+
+            Keys.Z,                 Keys.C,
+
+                                                Keys.D4,
+                                                Keys.R,
+                                                Keys.F,
+                                                Keys.V
+        };
+
+        private bool waitingForKeyPress;
+        private int waitingForKeyPressRegister;
 
         private System.Random randomNumbers = new Random();
 
@@ -112,7 +135,58 @@
             this.LoadRom(path, 0x200);
         }
 
-        public void EmulateCycle()
+        public void Step()
+        {
+            if (this.waitingForKeyPress)
+            {
+                this.WaitForKeyPress();
+            }
+            else
+            {
+                this.EmulateCycle();
+            }
+        }
+
+        public void UpdateTimers()
+        {
+            this.UpdateDelayTimer();
+            this.UpdateSoundTimer();
+        }
+
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    this.soundPlayer.Dispose();
+                }
+
+                this.disposed = true;
+            }
+        }
+
+        private void WaitForKeyPress()
+        {
+            var state = Keyboard.GetState();
+            for (int i = 0; i < this.key.Length; i++)
+            {
+                if (state.IsKeyDown(this.key[i]))
+                {
+                    this.waitingForKeyPress = false;
+                    this.v[this.waitingForKeyPressRegister] = (byte)i;
+                    break;
+                }
+            }
+        }
+
+        private void EmulateCycle()
         {
             var high = this.memory[this.pc];
             var low = this.memory[this.pc + 1];
@@ -307,7 +381,7 @@
                     switch (nn)
                     {
                         case 0x9E:  // EX9E     KeyOp       if(key()==Vx)
-                            if (this.key[this.v[x]] != 0)
+                            if (Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
                             {
                                 this.pc += 2;
                             }
@@ -315,7 +389,7 @@
                             break;
 
                         case 0xa1:  // EXA1     KeyOp       if(key()!=Vx)
-                            if (this.key[this.v[x]] == 0)
+                            if (!Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
                             {
                                 this.pc += 2;
                             }
@@ -336,6 +410,8 @@
                             break;
 
                         case 0x0a:  // FX0A     KeyOp       Vx = get_key()
+                            this.waitingForKeyPress = true;
+                            this.waitingForKeyPressRegister = x;
                             break;
 
                         case 0x15:  // FX15     Timer       delay_timer(Vx)
@@ -384,31 +460,6 @@
 
                 default:
                     throw new IllegalInstructionException(opcode);
-            }
-        }
-
-        public void UpdateTimers()
-        {
-            this.UpdateDelayTimer();
-            this.UpdateSoundTimer();
-        }
-
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.disposed)
-            {
-                if (disposing)
-                {
-                    this.soundPlayer.Dispose();
-                }
-
-                this.disposed = true;
             }
         }
 

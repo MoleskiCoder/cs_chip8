@@ -54,7 +54,7 @@
 
         protected override void Update(GameTime gameTime)
         {
-            this.processor.EmulateCycle();
+            this.processor.Step();
             base.Update(gameTime);
         }
             
