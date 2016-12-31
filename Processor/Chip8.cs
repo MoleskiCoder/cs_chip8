@@ -577,12 +577,12 @@
 
         private void LD_Vx_II(int x)
         {
-            Array.Copy(this.memory, this.i, this.v, 0, x);
+            Array.Copy(this.memory, this.i, this.v, 0, x + 1);
         }
 
         private void LD_II_Vx(int x)
         {
-            Array.Copy(this.v, 0, this.memory, this.i, x);
+            Array.Copy(this.v, 0, this.memory, this.i, x + 1);
         }
 
         private void LD_B_Vx(int x)
