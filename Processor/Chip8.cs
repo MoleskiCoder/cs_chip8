@@ -3,6 +3,7 @@
     using System;
     using System.IO;
     using System.Media;
+    using System.Text;
     using Microsoft.Xna.Framework.Input;
 
     public class Chip8 : IDisposable
@@ -701,15 +702,22 @@
             using (var file = File.Open(path, FileMode.Open))
             {
                 var size = file.Length;
-                if (size > this.memory.Length)
-                {
-                    throw new InvalidOperationException("File is too large");
-                }
 
+                var bytes = new byte[size];
                 using (var reader = new BinaryReader(file, new System.Text.UTF8Encoding(), true))
                 {
-                    reader.Read(this.memory, offset, (int)size);
+                    reader.Read(bytes, 0, (int)size);
                 }
+
+                var headerLength = 0;
+                var encoding = new ASCIIEncoding();
+                var header = encoding.GetString(bytes, 0, 8);
+                if (header == "HPHP48-A")
+                {
+                    headerLength = 13;
+                }
+
+                Array.Copy(bytes, headerLength, this.memory, offset, size - headerLength);
             }
         }
     }
