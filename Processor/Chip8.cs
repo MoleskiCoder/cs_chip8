@@ -8,14 +8,60 @@
 
     public class Chip8 : IDisposable
     {
-        public static readonly int ScreenWidth = 64;
-        public static readonly int ScreenHeight = 32;
+        public static readonly int ScreenWidthLow = 64;
+        public static readonly int ScreenHeightLow = 32;
+
+        public static readonly int ScreenWidthHigh = 128;
+        public static readonly int ScreenHeightHigh = 64;
+
+        private static readonly int StandardFontOffset = 0x1b0;
+        private static readonly int HighFontOffset = 0x110;
+
+        private static byte[] standardFont =
+        { 
+            0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+            0x20, 0x60, 0x20, 0x20, 0x70, // 1
+            0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+            0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+            0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+            0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+            0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+            0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+            0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+            0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+            0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+            0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+            0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+            0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+            0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+            0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+        };
+
+        private static byte[] highFont =
+        {
+            0x7C, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x7C, 0x00, // 0
+            0x08, 0x18, 0x38, 0x08, 0x08, 0x08, 0x08, 0x08, 0x3C, 0x00, // 1
+            0x7C, 0x82, 0x02, 0x02, 0x04, 0x18, 0x20, 0x40, 0xFE, 0x00, // 2
+            0x7C, 0x82, 0x02, 0x02, 0x3C, 0x02, 0x02, 0x82, 0x7C, 0x00, // 3
+            0x84, 0x84, 0x84, 0x84, 0xFE, 0x04, 0x04, 0x04, 0x04, 0x00, // 4
+            0xFE, 0x80, 0x80, 0x80, 0xFC, 0x02, 0x02, 0x82, 0x7C, 0x00, // 5
+            0x7C, 0x82, 0x80, 0x80, 0xFC, 0x82, 0x82, 0x82, 0x7C, 0x00, // 6
+            0xFE, 0x02, 0x04, 0x08, 0x10, 0x20, 0x20, 0x20, 0x20, 0x00, // 7
+            0x7C, 0x82, 0x82, 0x82, 0x7C, 0x82, 0x82, 0x82, 0x7C, 0x00, // 8
+            0x7C, 0x82, 0x82, 0x82, 0x7E, 0x02, 0x02, 0x82, 0x7C, 0x00, // 9
+            0x10, 0x28, 0x44, 0x82, 0x82, 0xFE, 0x82, 0x82, 0x82, 0x00, // A
+            0xFC, 0x82, 0x82, 0x82, 0xFC, 0x82, 0x82, 0x82, 0xFC, 0x00, // B
+            0x7C, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x82, 0x7C, 0x00, // C
+            0xFC, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0xFC, 0x00, // D
+            0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0xFE, 0x00, // E
+            0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0x80, 0x00, // F
+        };
 
         private byte[] memory = new byte[4096];
         private byte[] v = new byte[16];
         private short i;
         private short pc;
-        private bool[,] graphics = new bool[ScreenWidth, ScreenHeight];
+        private bool[,] graphics;
         private byte delayTimer;
         private byte soundTimer;
         private ushort[] stack = new ushort[16];
@@ -24,26 +70,6 @@
         private bool drawNeeded;
 
         private bool soundPlaying = false;
-
-        private byte[] chip8FontSet =
-        { 
-          0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-          0x20, 0x60, 0x20, 0x20, 0x70, // 1
-          0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-          0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-          0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-          0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-          0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-          0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-          0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-          0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-          0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-          0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-          0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-          0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-          0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-          0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-        };
 
         // CHIP-8 Keyboard layout
         //  1   2   3   C
@@ -73,7 +99,13 @@
 
         private SoundPlayer soundPlayer = new SoundPlayer();
 
+        private bool highResolution = false;
+
         private bool disposed = false;
+
+        public event EventHandler<EventArgs> HighResolutionConfigured;
+
+        public event EventHandler<EventArgs> LowResolutionConfigured;
 
         public bool DrawNeeded
         {
@@ -96,6 +128,43 @@
             }
         }
 
+        public bool HighResolution
+        {
+            get
+            {
+                return this.highResolution;
+            }
+
+            private set
+            {
+                this.highResolution = value;
+            }
+        }
+
+        public int ScreenWidth
+        {
+            get
+            {
+                return this.HighResolution ? ScreenWidthHigh : ScreenWidthLow;
+            }
+        }
+
+        public int ScreenHeight
+        {
+            get
+            {
+                return this.HighResolution ? ScreenHeightHigh : ScreenHeightLow;
+            }
+        }
+
+        public int PixelSize
+        {
+            get
+            {
+                return this.HighResolution ? 5 : 10;
+            }
+        }
+
         public void Initialise()
         {
             //// Initialize registers and memory once
@@ -104,8 +173,10 @@
             this.i = 0;          // Reset index register
             this.sp = 0;         // Reset stack pointer
 
+            this.AllocateGraphicsMemory();
+
             // Clear display
-            Array.Clear(this.graphics, 0, ScreenWidth * ScreenHeight);
+            this.CLS();
 
             // Clear stack
             Array.Clear(this.stack, 0, 16);
@@ -116,18 +187,15 @@
             // Clear memory
             Array.Clear(this.memory, 0, 4096);
 
-            // Load fontset
-            Array.Copy(this.chip8FontSet, this.memory, 16 * 5);
+            // Load fonts
+            Array.Copy(standardFont, 0, this.memory, StandardFontOffset, 16 * 5);
+            Array.Copy(highFont, 0, this.memory, HighFontOffset, 16 * 10);
 
             // Reset timers
             this.delayTimer = this.soundTimer = 0;
 
             // Sound
             this.soundPlayer.SoundLocation = @"..\..\..\Sounds\beep.wav";
-        }
-
-        public void SetKeys()
-        {
         }
 
         public void LoadGame(string game)
@@ -173,6 +241,16 @@
             }
         }
 
+        protected void OnHighResolution()
+        {
+            this.HighResolutionConfigured?.Invoke(this, EventArgs.Empty);
+        }
+
+        protected void OnLowResolution()
+        {
+            this.LowResolutionConfigured?.Invoke(this, EventArgs.Empty);
+        }
+
         private void WaitForKeyPress()
         {
             var state = Keyboard.GetState();
@@ -211,12 +289,46 @@
                             this.CLS();
                             break;
 
+                        case 0xfa:
+                            this.COMPATIBILITY();
+                            break;
+
+                        case 0xfb:
+                            this.SCRIGHT();
+                            break;
+
+                        case 0xfc:
+                            this.SCLEFT();
+                            break;
+
+                        case 0xfd:
+                            this.EXIT();
+                            break;
+
+                        case 0xfe:
+                            this.LOW();
+                            break;
+
+                        case 0xff:
+                            this.HIGH();
+                            break;
+
                         case 0xee:  // 00EE     Flow        return;
                             this.RET();
                             break;
 
                         default:
-                            throw new IllegalInstructionException(opcode, "RCA1802 Call");
+                            switch (y)
+                            {
+                                case 0xc:
+                                    this.SCDOWN(n);
+                                    break;
+
+                                default:
+                                    throw new IllegalInstructionException(opcode, "RCA1802 Call");
+                            }
+
+                            break;
                     }
 
                     break;
@@ -325,7 +437,17 @@
                     break;
 
                 case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
-                    this.DRW(x, y, n);
+                    switch (n)
+                    {
+                        case 0:
+                            this.XDRW(x, y);
+                            break;
+
+                        default:
+                            this.DRW(x, y, n);
+                            break;
+                    }
+
                     break;
 
                 case 0xe000:
@@ -372,6 +494,10 @@
                             this.LD_F_Vx(x);
                             break;
 
+                        case 0x30:
+                            this.LD_HF_Vx(x);
+                            break;
+
                         case 0x33:  // FX33     BCD
                                     //                      set_BCD(Vx);
                                     //                      *(I+0)=BCD(3);
@@ -388,6 +514,14 @@
                             this.LD_Vx_II(x);
                             break;
 
+                        case 0x75:
+                            this.LD_R_Vx(x);
+                            break;
+
+                        case 0x85:
+                            this.LD_Vx_R(x);
+                            break;
+
                         default:
                             throw new IllegalInstructionException(opcode);
                     }
@@ -398,7 +532,98 @@
                     throw new IllegalInstructionException(opcode);
             }
 
-            System.Diagnostics.Debug.WriteLine("");
+            System.Diagnostics.Debug.WriteLine(string.Empty);
+        }
+
+        ////
+
+        // scdown n
+        // Scroll the screen down n pixels. [Super-Chip]
+        // This opcode delays until the start of a 60Hz clock cycle before drawing in low resolution mode.
+        // (Use the delay timer to pace your games in high resolution mode.)
+        // Code generated: 0x00Cn
+        private void SCDOWN(int n)
+        {
+            System.Diagnostics.Debug.Write(string.Format("* SCDOWN\t{0:X1}", n));
+        }
+
+        // compatibility
+        // Mangle the "save" and "restore" opcodes to leave the I register unchanged.
+        // Warning: This opcode is not a standard Chip 8 opcode. It is provided soley to allow testing and
+        // porting of Chip 8 games which rely on this behaviour.
+        // Code generated: 0x00FA
+        private void COMPATIBILITY()
+        {
+            System.Diagnostics.Debug.Write("* COMPATIBILITY");
+        }
+
+        // scright
+        // Scroll the screen right 4 pixels. [Super-Chip]
+        // This opcode delays until the start of a 60Hz clock cycle before drawing in low resolution mode.
+        // (Use the delay timer to pace your games in high resolution mode.)
+        // Code generated: 0x00FB
+        private void SCRIGHT()
+        {
+            System.Diagnostics.Debug.Write("* SCRIGHT");
+        }
+
+        // scleft
+        // Scroll the screen left 4 pixels. [Super-Chip]
+        // This opcode delays until the start of a 60Hz clock cycle before drawing in low resolution mode.
+        // (Use the delay timer to pace your games in high resolution mode.)
+        // Code generated: 0x00FC
+        private void SCLEFT()
+        {
+            System.Diagnostics.Debug.Write("* SCLEFT");
+        }
+
+        // low
+        // Low resolution (64×32) graphics mode (this is the default). [Super-Chip]
+        // Code generated: 0x00FE
+        private void LOW()
+        {
+            System.Diagnostics.Debug.Write("LOW");
+            this.HighResolution = false;
+            this.AllocateGraphicsMemory();
+            this.OnLowResolution();
+        }
+
+        // high
+        // High resolution (128×64) graphics mode. [Super-Chip]
+        // Code generated: 0x00FF
+        private void HIGH()
+        {
+            System.Diagnostics.Debug.Write("HIGH");
+            this.HighResolution = true;
+            this.AllocateGraphicsMemory();
+            this.OnHighResolution();
+        }
+
+        // flags.save vX
+        // Store the values of registers v0 to vX into the "flags" registers (this means something in the
+        // HP48 implementation). (X < 8) [Super-Chip]
+        // Code generated: 0xFX75
+        private void LD_R_Vx(int x)
+        {
+            System.Diagnostics.Debug.Write(string.Format("* LD\tR,V{0:X1}", x));
+        }
+
+        // flags.restore vX
+        // Read the values of registers v0 to vX from the "flags" registers (this means something in the
+        // HP48 implementation). (X < 8) [Super-Chip]
+        // Code generated: 0xFX85
+        private void LD_Vx_R(int x)
+        {
+            System.Diagnostics.Debug.Write(string.Format("* LD\tV{0:X1},R", x));
+        }
+
+        // exit
+        // This opcode is used to terminate the chip8run program. It causes the chip8run program to exit
+        // with a successful exit status. [Super-Chip]
+        // Code generated: 0x00FD.
+        private void EXIT()
+        {
+            System.Diagnostics.Debug.Write("* EXIT");
         }
 
         ////
@@ -406,7 +631,7 @@
         private void CLS()
         {
             System.Diagnostics.Debug.Write("CLS");
-            Array.Clear(this.graphics, 0, ScreenWidth * ScreenHeight);
+            Array.Clear(this.graphics, 0, this.ScreenWidth * this.ScreenHeight);
         }
 
         private void RET()
@@ -554,6 +779,11 @@
             this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
         }
 
+        private void XDRW(int x, int y)
+        {
+            System.Diagnostics.Debug.Write(string.Format("* XDRW V{0:X1},V{1:X1}", x, y));
+        }
+
         private void DRW(int x, int y, int n)
         {
             System.Diagnostics.Debug.Write(string.Format("DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
@@ -573,7 +803,7 @@
                     var cellX = drawX + column;
                     if ((pixel & (0x80 >> column)) != 0)
                     {
-                        if ((cellX < ScreenWidth) && (cellY < ScreenHeight))
+                        if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
                         {
                             if (this.graphics[cellX, cellY])
                             {
@@ -631,7 +861,13 @@
         private void LD_F_Vx(int x)
         {
             System.Diagnostics.Debug.Write(string.Format("LD\tF,V{0:X1}", x));
-            this.i = (short)(5 * this.v[x]);
+            this.i = (short)(StandardFontOffset + (5 * this.v[x]));
+        }
+
+        private void LD_HF_Vx(int x)
+        {
+            System.Diagnostics.Debug.Write(string.Format("LD\tHF,V{0:X1}", x));
+            this.i = (short)(HighFontOffset + (10 * this.v[x]));
         }
 
         private void ADD_I_Vx(int x)
@@ -719,6 +955,11 @@
 
                 Array.Copy(bytes, headerLength, this.memory, offset, size - headerLength);
             }
+        }
+
+        private void AllocateGraphicsMemory()
+        {
+            this.graphics = new bool[this.ScreenWidth, this.ScreenHeight];
         }
     }
 }
