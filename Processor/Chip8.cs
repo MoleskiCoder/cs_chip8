@@ -197,6 +197,8 @@
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
 
+            System.Diagnostics.Debug.Write(string.Format("PC={0:x4}\t{1:x4}\t", this.pc, opcode));
+
             this.pc += 2;
 
             switch (opcode & 0xf000)
@@ -394,33 +396,40 @@
                 default:
                     throw new IllegalInstructionException(opcode);
             }
+
+            System.Diagnostics.Debug.WriteLine("");
         }
 
         ////
 
         private void CLS()
         {
+            System.Diagnostics.Debug.Write("CLS");
             Array.Clear(this.graphics, 0, ScreenWidth * ScreenHeight);
         }
 
         private void RET()
         {
+            System.Diagnostics.Debug.Write("RET");
             this.pc = (short)this.stack[--this.sp & 0xF];
         }
 
         private void JP(short nnn)
         {
+            System.Diagnostics.Debug.Write(string.Format("JP\t{0:X3}", nnn));
             this.pc = nnn;
         }
 
         private void CALL(short nnn)
         {
+            System.Diagnostics.Debug.Write(string.Format("CALL\t{0:X3}", nnn));
             this.stack[this.sp++] = (ushort)this.pc;
             this.pc = nnn;
         }
 
         private void SE(int x, byte nn)
         {
+            System.Diagnostics.Debug.Write(string.Format("SE\tV{0:X1},#{1:X2}", x, nn));
             if (this.v[x] == nn)
             {
                 this.pc += 2;
@@ -429,6 +438,7 @@
 
         private void SNE(int x, byte nn)
         {
+            System.Diagnostics.Debug.Write(string.Format("SNE\tV{0:X1},#{1:X2}", x, nn));
             if (this.v[x] != nn)
             {
                 this.pc += 2;
@@ -437,6 +447,7 @@
 
         private void SE(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("SE\tV{0:X1},V{1:X1}", x, y));
             if (this.v[x] == this.v[y])
             {
                 this.pc += 2;
@@ -445,66 +456,79 @@
 
         private void LD(int x, byte nn)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},#{1:X2}", x, nn));
             this.v[x] = nn;
         }
 
         private void ADD(int x, byte nn)
         {
+            System.Diagnostics.Debug.Write(string.Format("ADD\tV{0:X1},#{1:X2}", x, nn));
             this.v[x] += nn;
         }
 
         private void LD(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},V{1:X1}", x, y));
             this.v[x] = this.v[y];
         }
 
         private void OR(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("OR\tV{0:X1},V{1:X1}", x, y));
             this.v[x] |= this.v[y];
         }
 
         private void AND(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("AND\tV{0:X1},V{1:X1}", x, y));
             this.v[x] &= this.v[y];
         }
 
         private void XOR(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("XOR\tV{0:X1},V{1:X1}", x, y));
             this.v[x] ^= this.v[y];
         }
 
         private void ADD(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("ADD\tV{0:X1},V{1:X1}", x, y));
             this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
             this.v[x] += this.v[y];
         }
 
         private void SUB(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("SUB\tV{0:X1},V{1:X1}", x, y));
+            this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 1 : 0);
             this.v[x] -= this.v[y];
         }
 
         private void SHR(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("SHR\tV{0:X1}", x));
             this.v[x] >>= 1;
             this.v[0xf] = (byte)(this.v[x] & 0x1);
         }
 
         private void SUBN(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("SUBN\tV{0:X1},V{1:X1}", x, y));
             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 0 : 1);
             this.v[x] = (byte)(this.v[y] - this.v[x]);
         }
 
         private void SHL(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("SHL\tV{0:X1}", x));
             this.v[0xf] = (byte)(this.v[x] & 0x80);
             this.v[x] <<= 1;
         }
 
         private void SNE(int x, int y)
         {
+            System.Diagnostics.Debug.Write(string.Format("SNE\tV{0:X1},V{1:X1}", x, y));
             if (this.v[x] != this.v[y])
             {
                 this.pc += 2;
@@ -513,21 +537,26 @@
 
         private void LD_I(short nnn)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tI,#{0:X3}", nnn));
             this.i = nnn;
         }
 
         private void JP_V0(short nnn)
         {
+            System.Diagnostics.Debug.Write(string.Format("JP\t[V0],#{0:X3}", nnn));
             this.pc = (short)(this.v[0] + nnn);
         }
 
         private void RND(int x, byte nn)
         {
+            System.Diagnostics.Debug.Write(string.Format("RND\tV{0:X1},#{1:X2}", x, nn));
             this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
         }
 
         private void DRW(int x, int y, int n)
         {
+            System.Diagnostics.Debug.Write(string.Format("DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
+
             var drawX = this.v[x];
             var drawY = this.v[y];
             var height = n;
@@ -561,6 +590,7 @@
 
         private void SKP(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("SKP\tV{0:X1}", x));
             if (Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
             {
                 this.pc += 2;
@@ -569,6 +599,7 @@
 
         private void SKNP(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("SKNP\tV{0:X1}", x));
             if (!Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
             {
                 this.pc += 2;
@@ -577,16 +608,19 @@
 
         private void LD_Vx_II(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},[I]", x));
             Array.Copy(this.memory, this.i, this.v, 0, x + 1);
         }
 
         private void LD_II_Vx(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\t[I],V{0:X1}", x));
             Array.Copy(this.v, 0, this.memory, this.i, x + 1);
         }
 
         private void LD_B_Vx(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tB,V{0:X1}", x));
             var content = this.v[x];
             this.memory[this.i] = (byte)(content / 100);
             this.memory[this.i + 1] = (byte)((content / 10) % 10);
@@ -595,32 +629,38 @@
 
         private void LD_F_Vx(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tF,V{0:X1}", x));
             this.i = (short)(5 * this.v[x]);
         }
 
         private void ADD_I_Vx(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("ADD\tI,V{0:X1}", x));
             this.i += this.v[x];
         }
 
         private void LD_ST_Vx(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tST,V{0:X1}", x));
             this.soundTimer = this.v[x];
         }
 
         private void LD_DT_Vx(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tDT,V{0:X1}", x));
             this.delayTimer = this.v[x];
         }
 
         private void LD_Vx_K(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},K", x));
             this.waitingForKeyPress = true;
             this.waitingForKeyPressRegister = x;
         }
 
         private void LD_Vx_DT(int x)
         {
+            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},DT", x));
             this.v[x] = this.delayTimer;
         }
 
