@@ -787,7 +787,7 @@
         {
             System.Diagnostics.Debug.Write(string.Format("SUB\tV{0:X1},V{1:X1}", x, y));
             this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
-            this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 1 : 0);
+            this.v[0xf] = (byte)(this.v[x] >= this.v[y] ? 1 : 0);
             this.v[x] -= this.v[y];
         }
 
@@ -808,7 +808,7 @@
         private void SHL(int x)
         {
             System.Diagnostics.Debug.Write(string.Format("SHL\tV{0:X1}", x));
-            this.v[0xf] = (byte)(this.v[x] & 0x80);
+            this.v[0xf] = (byte)((this.v[x] & 0x80) == 0 ? 0 : 1);
             this.v[x] <<= 1;
         }
 
