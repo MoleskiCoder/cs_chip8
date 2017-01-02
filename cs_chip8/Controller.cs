@@ -1,10 +1,14 @@
 ﻿namespace Emulator
 {
+    using System;
+    using System.Media;
+
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
+
     using Processor;
 
-    internal class Controller : Game
+    internal class Controller : Game, IDisposable
     {
         private Chip8 processor;
 
@@ -12,14 +16,34 @@
         private SpriteBatch spriteBatch;
         private Texture2D pixel;
 
+        private SoundPlayer soundPlayer = new SoundPlayer();
+
+        private bool disposed = false;
+
         public Controller()
         {
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    this.soundPlayer.Dispose();
+                }
+
+                this.disposed = true;
+            }
+        }
+
         protected override void LoadContent()
         {
+            this.soundPlayer.SoundLocation = @"..\..\..\Sounds\beep.wav";
+
             this.spriteBatch = new SpriteBatch(GraphicsDevice);
 
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
@@ -31,9 +55,30 @@
 
             this.processor.HighResolutionConfigured += this.Processor_HighResolution;
             this.processor.LowResolutionConfigured += this.Processor_LowResolution;
+            this.processor.BeepStarting += this.Processor_BeepStarting;
+            this.processor.BeepStopped += this.Processor_BeepStopped;
 
             this.processor.Initialise();
-            this.processor.LoadGame("PONG");
+
+            ////this.processor.LoadGame(@"GAMES\PONG.ch8");
+
+            ////this.processor.LoadGame(@"SGAMES\ALIEN");
+            ////this.processor.LoadGame(@"SGAMES\ANT");
+            ////this.processor.LoadGame(@"SGAMES\BLINKY");
+            ////this.processor.LoadGame(@"SGAMES\CAR");
+            ////this.processor.LoadGame(@"SGAMES\DRAGON1");
+            ////this.processor.LoadGame(@"SGAMES\DRAGON2");
+            ////this.processor.LoadGame(@"SGAMES\FIELD");
+            ////this.processor.LoadGame(@"SGAMES\JOUST23");
+            ////this.processor.LoadGame(@"SGAMES\MAZE");
+            ////this.processor.LoadGame(@"SGAMES\MINES");
+            ////this.processor.LoadGame(@"SGAMES\PIPER");
+            ////this.processor.LoadGame(@"SGAMES\RACE");
+            this.processor.LoadGame(@"SGAMES\SPACEFIG");
+            ////this.processor.LoadGame(@"SGAMES\SQUARE");
+            ////this.processor.LoadGame(@"SGAMES\TEST");
+            ////this.processor.LoadGame(@"SGAMES\UBOAT");
+            ////this.processor.LoadGame(@"SGAMES\WORM3");
         }
 
         protected override void Update(GameTime gameTime)
@@ -97,6 +142,16 @@
             {
                 this.spriteBatch.End();
             }
+        }
+
+        private void Processor_BeepStarting(object sender, EventArgs e)
+        {
+            this.soundPlayer.PlayLooping();
+        }
+
+        private void Processor_BeepStopped(object sender, EventArgs e)
+        {
+            this.soundPlayer.Stop();
         }
 
         private void Processor_LowResolution(object sender, System.EventArgs e)

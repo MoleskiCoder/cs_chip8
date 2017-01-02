@@ -2,11 +2,10 @@
 {
     using System;
     using System.IO;
-    using System.Media;
     using System.Text;
     using Microsoft.Xna.Framework.Input;
 
-    public class Chip8 : IDisposable
+    public class Chip8
     {
         public static readonly int ScreenWidthLow = 64;
         public static readonly int ScreenHeightLow = 32;
@@ -97,18 +96,18 @@
         private bool waitingForKeyPress;
         private int waitingForKeyPressRegister;
 
-        private System.Random randomNumbers = new Random();
-
-        private SoundPlayer soundPlayer = new SoundPlayer();
+        private Random randomNumbers = new Random();
 
         private bool highResolution = false;
         private bool finished = false;
 
-        private bool disposed = false;
-
         public event EventHandler<EventArgs> HighResolutionConfigured;
 
         public event EventHandler<EventArgs> LowResolutionConfigured;
+
+        public event EventHandler<EventArgs> BeepStarting;
+
+        public event EventHandler<EventArgs> BeepStopped;
 
         public bool Finished
         {
@@ -189,6 +188,19 @@
             }
         }
 
+        public bool SoundPlaying
+        {
+            get
+            {
+                return this.soundPlaying;
+            }
+
+            private set
+            {
+                this.soundPlaying = value;
+            }
+        }
+
         public void Initialise()
         {
             this.Finished = false;
@@ -219,9 +231,6 @@
 
             // Reset timers
             this.delayTimer = this.soundTimer = 0;
-
-            // Sound
-            this.soundPlayer.SoundLocation = @"..\..\..\Sounds\beep.wav";
         }
 
         public void LoadGame(string game)
@@ -248,25 +257,6 @@
             this.UpdateSoundTimer();
         }
 
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.disposed)
-            {
-                if (disposing)
-                {
-                    this.soundPlayer.Dispose();
-                }
-
-                this.disposed = true;
-            }
-        }
-
         protected void OnHighResolution()
         {
             this.HighResolutionConfigured?.Invoke(this, EventArgs.Empty);
@@ -275,6 +265,18 @@
         protected void OnLowResolution()
         {
             this.LowResolutionConfigured?.Invoke(this, EventArgs.Empty);
+        }
+
+        protected void OnBeepStarting()
+        {
+            this.BeepStarting?.Invoke(this, EventArgs.Empty);
+            this.SoundPlaying = true;
+        }
+
+        protected void OnBeepStopped()
+        {
+           this.SoundPlaying = false;
+           this.BeepStopped?.Invoke(this, EventArgs.Empty);
         }
 
         private void WaitForKeyPress()
@@ -952,20 +954,18 @@
         {
             if (this.soundTimer > 0)
             {
-                if (!this.soundPlaying)
+                if (!this.SoundPlaying)
                 {
-                    this.soundPlayer.PlayLooping();
-                    this.soundPlaying = true;
+                    this.OnBeepStarting();
                 }
 
                 --this.soundTimer;
             }
             else
             {
-                if (this.soundPlaying)
+                if (this.SoundPlaying)
                 {
-                    this.soundPlayer.Stop();
-                    this.soundPlaying = false;
+                    this.OnBeepStopped();
                 }
             }
         }
