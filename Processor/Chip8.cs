@@ -781,7 +781,41 @@
 
         private void XDRW(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("* XDRW V{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format("XDRW V{0:X1},V{1:X1}", x, y));
+
+            var drawX = this.v[x];
+            var drawY = this.v[y];
+            var height = 16;
+            var width = 16;
+
+            this.v[0xf] = 0;
+
+            for (var row = 0; row < height; row++)
+            {
+                var cellY = drawY + row;
+                var pixelAddress = this.i + (row * 2);
+                for (var column = 0; column < width; column++)
+                {
+                    var high = column > 7;
+                    var pixelMemory = this.memory[pixelAddress + (high ? 1 : 0)];
+                    var pixel = (pixelMemory & (0x80 >> (column & 0x7))) != 0;
+                    if (pixel)
+                    {
+                        var cellX = drawX + column;
+                        if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
+                        {
+                            if (this.graphics[cellX, cellY])
+                            {
+                                this.v[0xf] = 1;
+                            }
+
+                            this.graphics[cellX, cellY] ^= true;
+                        }
+                    }
+                }
+            }
+
+            this.drawNeeded = true;
         }
 
         private void DRW(int x, int y, int n)
@@ -797,12 +831,14 @@
             for (int row = 0; row < height; ++row)
             {
                 var cellY = drawY + row;
-                var pixel = this.memory[this.i + row];
+                var pixelAddress = this.i + row;
+                var pixelMemory = this.memory[pixelAddress];
                 for (int column = 0; column < 8; ++column)
                 {
-                    var cellX = drawX + column;
-                    if ((pixel & (0x80 >> column)) != 0)
+                    var pixel = (pixelMemory & (0x80 >> column)) != 0;
+                    if (pixel)
                     {
+                        var cellX = drawX + column;
                         if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
                         {
                             if (this.graphics[cellX, cellY])
