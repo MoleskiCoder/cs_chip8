@@ -903,6 +903,13 @@
         private void ADD_I_Vx(int x)
         {
             System.Diagnostics.Debug.Write(string.Format("ADD\tI,V{0:X1}", x));
+
+            // From wikipedia entry on CHIP-8:
+            // VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0
+            // when there isn't. This is an undocumented feature of the CHIP-8 and used by the Spacefight 2091! game
+            var sum = this.i + this.v[x];
+            this.v[0xf] = (byte)(sum > 0xfff ? 1 : 0);
+
             this.i += this.v[x];
         }
 
