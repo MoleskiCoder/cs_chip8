@@ -67,6 +67,8 @@
         private ushort[] stack = new ushort[16];
         private ushort sp;
 
+        private byte[] r = new byte[8]; // HP48 flags
+
         private bool drawNeeded;
 
         private bool soundPlaying = false;
@@ -100,12 +102,26 @@
         private SoundPlayer soundPlayer = new SoundPlayer();
 
         private bool highResolution = false;
+        private bool finished = false;
 
         private bool disposed = false;
 
         public event EventHandler<EventArgs> HighResolutionConfigured;
 
         public event EventHandler<EventArgs> LowResolutionConfigured;
+
+        public bool Finished
+        {
+            get
+            {
+                return this.finished;
+            }
+
+            private set
+            {
+                this.finished = value;
+            }
+        }
 
         public bool DrawNeeded
         {
@@ -141,6 +157,14 @@
             }
         }
 
+        public bool LowResolution
+        {
+            get
+            {
+                return !this.HighResolution;
+            }
+        }
+
         public int ScreenWidth
         {
             get
@@ -167,7 +191,9 @@
 
         public void Initialise()
         {
-            //// Initialize registers and memory once
+            this.Finished = false;
+            this.DrawNeeded = false;
+            this.HighResolution = false;
 
             this.pc = 0x200;     // Program counter starts at 0x200
             this.i = 0;          // Reset index register
@@ -544,7 +570,13 @@
         // Code generated: 0x00Cn
         private void SCDOWN(int n)
         {
-            System.Diagnostics.Debug.Write(string.Format("* SCDOWN\t{0:X1}", n));
+            System.Diagnostics.Debug.Write(string.Format("SCDOWN\t{0:X1}", n));
+            for (int y = this.ScreenHeight - n - 1; y > 0; --y)
+            {
+                this.CopyGraphicsRow(y, y + n);
+            }
+
+            this.DrawNeeded = true;
         }
 
         // compatibility
@@ -555,6 +587,7 @@
         private void COMPATIBILITY()
         {
             System.Diagnostics.Debug.Write("* COMPATIBILITY");
+            throw new InvalidOperationException("COMPATIBILITY unimplemented");
         }
 
         // scright
@@ -564,7 +597,15 @@
         // Code generated: 0x00FB
         private void SCRIGHT()
         {
-            System.Diagnostics.Debug.Write("* SCRIGHT");
+            System.Diagnostics.Debug.Write("SCRIGHT");
+
+            var n = 4;
+            for (int x = this.ScreenWidth - n - 1; x > 0; --x)
+            {
+                this.CopyGraphicsColumn(x, x + n);
+            }
+
+            this.DrawNeeded = true;
         }
 
         // scleft
@@ -574,7 +615,15 @@
         // Code generated: 0x00FC
         private void SCLEFT()
         {
-            System.Diagnostics.Debug.Write("* SCLEFT");
+            System.Diagnostics.Debug.Write("SCLEFT");
+
+            var n = 4;
+            for (int x = 0; x < this.ScreenWidth - n - 1; ++x)
+            {
+                this.CopyGraphicsColumn(x, x + n);
+            }
+
+            this.DrawNeeded = true;
         }
 
         // low
@@ -605,7 +654,11 @@
         // Code generated: 0xFX75
         private void LD_R_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("* LD\tR,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format("LD\tR,V{0:X1}", x));
+            for (int i = 0; i <= x; ++i)
+            {
+                this.r[i] = this.v[i];
+            }
         }
 
         // flags.restore vX
@@ -614,7 +667,11 @@
         // Code generated: 0xFX85
         private void LD_Vx_R(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("* LD\tV{0:X1},R", x));
+            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},R", x));
+            for (int i = 0; i <= x; ++i)
+            {
+                this.v[i] = this.r[i];
+            }
         }
 
         // exit
@@ -623,7 +680,8 @@
         // Code generated: 0x00FD.
         private void EXIT()
         {
-            System.Diagnostics.Debug.Write("* EXIT");
+            System.Diagnostics.Debug.Write("EXIT");
+            this.Finished = true;
         }
 
         ////
@@ -967,6 +1025,22 @@
             }
 
             this.drawNeeded = true;
+        }
+
+        private void CopyGraphicsRow(int from, int to)
+        {
+            for (int x = 0; x < this.ScreenWidth; ++x)
+            {
+                this.graphics[x, from] = this.graphics[x, to];
+            }
+        }
+
+        private void CopyGraphicsColumn(int from, int to)
+        {
+            for (int y = 0; y < this.ScreenHeight; ++y)
+            {
+                this.graphics[from, y] = this.graphics[to, y];
+            }
         }
     }
 }

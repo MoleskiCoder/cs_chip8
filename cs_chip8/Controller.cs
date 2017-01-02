@@ -38,9 +38,22 @@
 
         protected override void Update(GameTime gameTime)
         {
-            this.processor.Step();
-            this.processor.Step();
-            this.processor.Step();
+            var cpuTickLimit = 5;
+            for (int i = 0; i < cpuTickLimit; ++i)
+            {
+                if (this.processor.Finished)
+                {
+                    this.Exit();
+                }
+
+                if (this.processor.LowResolution && this.processor.DrawNeeded)
+                {
+                    break;
+                }
+
+                this.processor.Step();
+            }
+
             this.processor.UpdateTimers();
             base.Update(gameTime);
         }
