@@ -573,10 +573,19 @@
         private void SCDOWN(int n)
         {
             System.Diagnostics.Debug.Write(string.Format("SCDOWN\t{0:X1}", n));
+
+            // Copy rows bottom to top
             for (int y = this.ScreenHeight - n - 1; y > 0; --y)
             {
                 this.CopyGraphicsRow(y, y + n);
             }
+
+            // Remove the top columns, blanked by the scroll effect
+            for (int y = 0; y < n; ++y)
+            {
+                this.ClearGraphicsColumn(y);
+            }
+
 
             this.DrawNeeded = true;
         }
@@ -601,10 +610,19 @@
         {
             System.Diagnostics.Debug.Write("SCRIGHT");
 
+            // Scroll distance
             var n = 4;
+
+            // Copy colummns from right to left
             for (int x = this.ScreenWidth - n - 1; x > 0; --x)
             {
-                this.CopyGraphicsColumn(x, x + n);
+                this.CopyGraphicsColumn(x + n, x);
+            }
+
+            // Remove the leftmost columns, blanked by the scroll effect
+            for (int x = 0; x < n; ++x)
+            {
+                this.ClearGraphicsColumn(x);
             }
 
             this.DrawNeeded = true;
@@ -619,10 +637,19 @@
         {
             System.Diagnostics.Debug.Write("SCLEFT");
 
+            // Scroll distance
             var n = 4;
+
+            // Copy columns from left to right
             for (int x = 0; x < this.ScreenWidth - n - 1; ++x)
             {
                 this.CopyGraphicsColumn(x, x + n);
+            }
+
+            // Remove the rightmost columns, blanked by the scroll effect
+            for (int x = this.ScreenWidth - n - 1; x < this.ScreenWidth; ++x)
+            {
+                this.ClearGraphicsColumn(x);
             }
 
             this.DrawNeeded = true;
@@ -1032,6 +1059,22 @@
             }
 
             this.drawNeeded = true;
+        }
+
+        private void ClearGraphicsRow(int row)
+        {
+            for (int x = 0; x < this.ScreenWidth; ++x)
+            {
+                this.graphics[x, row] = false;
+            }
+        }
+
+        private void ClearGraphicsColumn(int column)
+        {
+            for (int y = 0; y < this.ScreenHeight; ++y)
+            {
+                this.graphics[column, y] = false;
+            }
         }
 
         private void CopyGraphicsRow(int from, int to)
