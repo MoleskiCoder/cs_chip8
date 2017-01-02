@@ -38,8 +38,8 @@
 
         protected override void Update(GameTime gameTime)
         {
-            var cpuTickLimit = 5;
-            for (int i = 0; i < cpuTickLimit; ++i)
+            var cyclesPerFrame = 20;
+            for (int i = 0; i < cyclesPerFrame; ++i)
             {
                 if (this.processor.Finished)
                 {
