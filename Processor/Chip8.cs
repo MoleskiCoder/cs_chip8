@@ -782,77 +782,13 @@
         private void XDRW(int x, int y)
         {
             System.Diagnostics.Debug.Write(string.Format("XDRW V{0:X1},V{1:X1}", x, y));
-
-            var drawX = this.v[x];
-            var drawY = this.v[y];
-            var height = 16;
-            var width = 16;
-
-            this.v[0xf] = 0;
-
-            for (var row = 0; row < height; row++)
-            {
-                var cellY = drawY + row;
-                var pixelAddress = this.i + (row * 2);
-                for (var column = 0; column < width; column++)
-                {
-                    var high = column > 7;
-                    var pixelMemory = this.memory[pixelAddress + (high ? 1 : 0)];
-                    var pixel = (pixelMemory & (0x80 >> (column & 0x7))) != 0;
-                    if (pixel)
-                    {
-                        var cellX = drawX + column;
-                        if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
-                        {
-                            if (this.graphics[cellX, cellY])
-                            {
-                                this.v[0xf] = 1;
-                            }
-
-                            this.graphics[cellX, cellY] ^= true;
-                        }
-                    }
-                }
-            }
-
-            this.drawNeeded = true;
+            this.Draw(x, y, 16, 16, 2);
         }
 
         private void DRW(int x, int y, int n)
         {
             System.Diagnostics.Debug.Write(string.Format("DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
-
-            var drawX = this.v[x];
-            var drawY = this.v[y];
-            var height = n;
-
-            this.v[0xf] = 0;
-
-            for (int row = 0; row < height; ++row)
-            {
-                var cellY = drawY + row;
-                var pixelAddress = this.i + row;
-                var pixelMemory = this.memory[pixelAddress];
-                for (int column = 0; column < 8; ++column)
-                {
-                    var pixel = (pixelMemory & (0x80 >> column)) != 0;
-                    if (pixel)
-                    {
-                        var cellX = drawX + column;
-                        if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
-                        {
-                            if (this.graphics[cellX, cellY])
-                            {
-                                this.v[0xf] = 1;
-                            }
-
-                            this.graphics[cellX, cellY] ^= true;
-                        }
-                    }
-                }
-            }
-
-            this.drawNeeded = true;
+            this.Draw(x, y, 8, n, 1);
         }
 
         private void SKP(int x)
@@ -996,6 +932,41 @@
         private void AllocateGraphicsMemory()
         {
             this.graphics = new bool[this.ScreenWidth, this.ScreenHeight];
+        }
+
+        private void Draw(int x, int y, int width, int height, int bytesPerRow)
+        {
+            var drawX = this.v[x];
+            var drawY = this.v[y];
+
+            this.v[0xf] = 0;
+
+            for (var row = 0; row < height; row++)
+            {
+                var cellY = drawY + row;
+                var pixelAddress = this.i + (row * bytesPerRow);
+                for (var column = 0; column < width; column++)
+                {
+                    var high = column > 7;
+                    var pixelMemory = this.memory[pixelAddress + (high ? 1 : 0)];
+                    var pixel = (pixelMemory & (0x80 >> (column & 0x7))) != 0;
+                    if (pixel)
+                    {
+                        var cellX = drawX + column;
+                        if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
+                        {
+                            if (this.graphics[cellX, cellY])
+                            {
+                                this.v[0xf] = 1;
+                            }
+
+                            this.graphics[cellX, cellY] ^= true;
+                        }
+                    }
+                }
+            }
+
+            this.drawNeeded = true;
         }
     }
 }
