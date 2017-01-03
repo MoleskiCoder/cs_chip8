@@ -580,7 +580,7 @@
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SCDOWN\t{0:X1}", n));
 
             // Copy rows bottom to top
-            for (int y = this.ScreenHeight - n - 1; y > 0; --y)
+            for (int y = this.ScreenHeight - n - 1; y >= 0; --y)
             {
                 this.CopyGraphicsRow(y + n, y);
             }
@@ -618,7 +618,7 @@
             var n = 4;
 
             // Copy colummns from right to left
-            for (int x = this.ScreenWidth - n - 1; x > 0; --x)
+            for (int x = this.ScreenWidth - n - 1; x >= 0; --x)
             {
                 this.CopyGraphicsColumn(x + n, x);
             }
