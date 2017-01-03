@@ -1,20 +1,21 @@
 ﻿namespace Processor
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Text;
     using Microsoft.Xna.Framework.Input;
 
     public class Chip8
     {
-        public static readonly int ScreenWidthLow = 64;
-        public static readonly int ScreenHeightLow = 32;
+        public const int ScreenWidthLow = 64;
+        public const int ScreenHeightLow = 32;
 
-        public static readonly int ScreenWidthHigh = 128;
-        public static readonly int ScreenHeightHigh = 64;
+        public const int ScreenWidthHigh = 128;
+        public const int ScreenHeightHigh = 64;
 
-        private static readonly int StandardFontOffset = 0x1b0;
-        private static readonly int HighFontOffset = 0x110;
+        private const int StandardFontOffset = 0x1b0;
+        private const int HighFontOffset = 0x110;
 
         private static byte[] standardFont =
         { 
@@ -60,7 +61,7 @@
         private byte[] v = new byte[16];
         private short i;
         private short pc;
-        private bool[,] graphics;
+        private bool[] graphics;
         private byte delayTimer;
         private byte soundTimer;
         private ushort[] stack = new ushort[16];
@@ -135,7 +136,7 @@
             }
         }
 
-        public bool[,] Graphics
+        public bool[] Graphics
         {
             get
             {
@@ -214,7 +215,7 @@
             this.AllocateGraphicsMemory();
 
             // Clear display
-            this.CLS();
+            this.ClearGraphics();
 
             // Clear stack
             Array.Clear(this.stack, 0, 16);
@@ -259,11 +260,15 @@
 
         protected void OnHighResolution()
         {
+            this.HighResolution = true;
+            this.AllocateGraphicsMemory();
             this.HighResolutionConfigured?.Invoke(this, EventArgs.Empty);
         }
 
         protected void OnLowResolution()
         {
+            this.HighResolution = false;
+            this.AllocateGraphicsMemory();
             this.LowResolutionConfigured?.Invoke(this, EventArgs.Empty);
         }
 
@@ -282,12 +287,12 @@
         private void WaitForKeyPress()
         {
             var state = Keyboard.GetState();
-            for (int i = 0; i < this.key.Length; i++)
+            for (int idx = 0; idx < this.key.Length; idx++)
             {
-                if (state.IsKeyDown(this.key[i]))
+                if (state.IsKeyDown(this.key[idx]))
                 {
                     this.waitingForKeyPress = false;
-                    this.v[this.waitingForKeyPressRegister] = (byte)i;
+                    this.v[this.waitingForKeyPressRegister] = (byte)idx;
                     break;
                 }
             }
@@ -304,7 +309,7 @@
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
 
-            System.Diagnostics.Debug.Write(string.Format("PC={0:x4}\t{1:x4}\t", this.pc, opcode));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, opcode));
 
             this.pc += 2;
 
@@ -572,7 +577,7 @@
         // Code generated: 0x00Cn
         private void SCDOWN(int n)
         {
-            System.Diagnostics.Debug.Write(string.Format("SCDOWN\t{0:X1}", n));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SCDOWN\t{0:X1}", n));
 
             // Copy rows bottom to top
             for (int y = this.ScreenHeight - n - 1; y > 0; --y)
@@ -585,7 +590,6 @@
             {
                 this.ClearGraphicsRow(y);
             }
-
 
             this.DrawNeeded = true;
         }
@@ -661,8 +665,6 @@
         private void LOW()
         {
             System.Diagnostics.Debug.Write("LOW");
-            this.HighResolution = false;
-            this.AllocateGraphicsMemory();
             this.OnLowResolution();
         }
 
@@ -672,8 +674,6 @@
         private void HIGH()
         {
             System.Diagnostics.Debug.Write("HIGH");
-            this.HighResolution = true;
-            this.AllocateGraphicsMemory();
             this.OnHighResolution();
         }
 
@@ -683,10 +683,10 @@
         // Code generated: 0xFX75
         private void LD_R_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tR,V{0:X1}", x));
-            for (int i = 0; i <= x; ++i)
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tR,V{0:X1}", x));
+            for (int register = 0; register <= x; ++register)
             {
-                this.r[i] = this.v[i];
+                this.r[register] = this.v[register];
             }
         }
 
@@ -696,10 +696,10 @@
         // Code generated: 0xFX85
         private void LD_Vx_R(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},R", x));
-            for (int i = 0; i <= x; ++i)
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},R", x));
+            for (int register = 0; register <= x; ++register)
             {
-                this.v[i] = this.r[i];
+                this.v[register] = this.r[register];
             }
         }
 
@@ -718,7 +718,8 @@
         private void CLS()
         {
             System.Diagnostics.Debug.Write("CLS");
-            Array.Clear(this.graphics, 0, this.ScreenWidth * this.ScreenHeight);
+            this.ClearGraphics();
+            this.DrawNeeded = true;
         }
 
         private void RET()
@@ -729,20 +730,20 @@
 
         private void JP(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format("JP\t{0:X3}", nnn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "JP\t{0:X3}", nnn));
             this.pc = nnn;
         }
 
         private void CALL(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format("CALL\t{0:X3}", nnn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "CALL\t{0:X3}", nnn));
             this.stack[this.sp++] = (ushort)this.pc;
             this.pc = nnn;
         }
 
         private void SE(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format("SE\tV{0:X1},#{1:X2}", x, nn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SE\tV{0:X1},#{1:X2}", x, nn));
             if (this.v[x] == nn)
             {
                 this.pc += 2;
@@ -751,7 +752,7 @@
 
         private void SNE(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format("SNE\tV{0:X1},#{1:X2}", x, nn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SNE\tV{0:X1},#{1:X2}", x, nn));
             if (this.v[x] != nn)
             {
                 this.pc += 2;
@@ -760,7 +761,7 @@
 
         private void SE(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("SE\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SE\tV{0:X1},V{1:X1}", x, y));
             if (this.v[x] == this.v[y])
             {
                 this.pc += 2;
@@ -769,79 +770,78 @@
 
         private void LD(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},#{1:X2}", x, nn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},#{1:X2}", x, nn));
             this.v[x] = nn;
         }
 
         private void ADD(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format("ADD\tV{0:X1},#{1:X2}", x, nn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "ADD\tV{0:X1},#{1:X2}", x, nn));
             this.v[x] += nn;
         }
 
         private void LD(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},V{1:X1}", x, y));
             this.v[x] = this.v[y];
         }
 
         private void OR(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("OR\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "OR\tV{0:X1},V{1:X1}", x, y));
             this.v[x] |= this.v[y];
         }
 
         private void AND(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("AND\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "AND\tV{0:X1},V{1:X1}", x, y));
             this.v[x] &= this.v[y];
         }
 
         private void XOR(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("XOR\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "XOR\tV{0:X1},V{1:X1}", x, y));
             this.v[x] ^= this.v[y];
         }
 
         private void ADD(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("ADD\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "ADD\tV{0:X1},V{1:X1}", x, y));
             this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
             this.v[x] += this.v[y];
         }
 
         private void SUB(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("SUB\tV{0:X1},V{1:X1}", x, y));
-            this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SUB\tV{0:X1},V{1:X1}", x, y));
             this.v[0xf] = (byte)(this.v[x] >= this.v[y] ? 1 : 0);
             this.v[x] -= this.v[y];
         }
 
         private void SHR(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("SHR\tV{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SHR\tV{0:X1}", x));
             this.v[x] >>= 1;
             this.v[0xf] = (byte)(this.v[x] & 0x1);
         }
 
         private void SUBN(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("SUBN\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SUBN\tV{0:X1},V{1:X1}", x, y));
             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 0 : 1);
             this.v[x] = (byte)(this.v[y] - this.v[x]);
         }
 
         private void SHL(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("SHL\tV{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SHL\tV{0:X1}", x));
             this.v[0xf] = (byte)((this.v[x] & 0x80) == 0 ? 0 : 1);
             this.v[x] <<= 1;
         }
 
         private void SNE(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("SNE\tV{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SNE\tV{0:X1},V{1:X1}", x, y));
             if (this.v[x] != this.v[y])
             {
                 this.pc += 2;
@@ -850,37 +850,37 @@
 
         private void LD_I(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tI,#{0:X3}", nnn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tI,#{0:X3}", nnn));
             this.i = nnn;
         }
 
         private void JP_V0(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format("JP\t[V0],#{0:X3}", nnn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "JP\t[V0],#{0:X3}", nnn));
             this.pc = (short)(this.v[0] + nnn);
         }
 
         private void RND(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format("RND\tV{0:X1},#{1:X2}", x, nn));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "RND\tV{0:X1},#{1:X2}", x, nn));
             this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
         }
 
         private void XDRW(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format("XDRW V{0:X1},V{1:X1}", x, y));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "XDRW V{0:X1},V{1:X1}", x, y));
             this.Draw(x, y, 16, 16, 2);
         }
 
         private void DRW(int x, int y, int n)
         {
-            System.Diagnostics.Debug.Write(string.Format("DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
             this.Draw(x, y, 8, n, 1);
         }
 
         private void SKP(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("SKP\tV{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SKP\tV{0:X1}", x));
             if (Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
             {
                 this.pc += 2;
@@ -889,7 +889,7 @@
 
         private void SKNP(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("SKNP\tV{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SKNP\tV{0:X1}", x));
             if (!Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
             {
                 this.pc += 2;
@@ -898,19 +898,19 @@
 
         private void LD_Vx_II(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},[I]", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},[I]", x));
             Array.Copy(this.memory, this.i, this.v, 0, x + 1);
         }
 
         private void LD_II_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\t[I],V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\t[I],V{0:X1}", x));
             Array.Copy(this.v, 0, this.memory, this.i, x + 1);
         }
 
         private void LD_B_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tB,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tB,V{0:X1}", x));
             var content = this.v[x];
             this.memory[this.i] = (byte)(content / 100);
             this.memory[this.i + 1] = (byte)((content / 10) % 10);
@@ -919,19 +919,19 @@
 
         private void LD_F_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tF,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tF,V{0:X1}", x));
             this.i = (short)(StandardFontOffset + (5 * this.v[x]));
         }
 
         private void LD_HF_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tHF,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tHF,V{0:X1}", x));
             this.i = (short)(HighFontOffset + (10 * this.v[x]));
         }
 
         private void ADD_I_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("ADD\tI,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "ADD\tI,V{0:X1}", x));
 
             // From wikipedia entry on CHIP-8:
             // VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0
@@ -944,26 +944,26 @@
 
         private void LD_ST_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tST,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tST,V{0:X1}", x));
             this.soundTimer = this.v[x];
         }
 
         private void LD_DT_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tDT,V{0:X1}", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tDT,V{0:X1}", x));
             this.delayTimer = this.v[x];
         }
 
         private void LD_Vx_K(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},K", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},K", x));
             this.waitingForKeyPress = true;
             this.waitingForKeyPressRegister = x;
         }
 
         private void LD_Vx_DT(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format("LD\tV{0:X1},DT", x));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},DT", x));
             this.v[x] = this.delayTimer;
         }
 
@@ -1023,7 +1023,7 @@
 
         private void AllocateGraphicsMemory()
         {
-            this.graphics = new bool[this.ScreenWidth, this.ScreenHeight];
+            this.graphics = new bool[this.ScreenWidth * this.ScreenHeight];
         }
 
         private void Draw(int x, int y, int width, int height, int bytesPerRow)
@@ -1033,11 +1033,11 @@
 
             this.v[0xf] = 0;
 
-            for (var row = 0; row < height; row++)
+            for (var row = 0; row < height; ++row)
             {
                 var cellY = drawY + row;
                 var pixelAddress = this.i + (row * bytesPerRow);
-                for (var column = 0; column < width; column++)
+                for (var column = 0; column < width; ++column)
                 {
                     var high = column > 7;
                     var pixelMemory = this.memory[pixelAddress + (high ? 1 : 0)];
@@ -1047,12 +1047,13 @@
                         var cellX = drawX + column;
                         if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
                         {
-                            if (this.graphics[cellX, cellY])
+                            var cell = cellX + (cellY * this.ScreenWidth);
+                            if (this.graphics[cell])
                             {
                                 this.v[0xf] = 1;
                             }
 
-                            this.graphics[cellX, cellY] ^= true;
+                            this.graphics[cell] ^= true;
                         }
                     }
                 }
@@ -1065,7 +1066,7 @@
         {
             for (int x = 0; x < this.ScreenWidth; ++x)
             {
-                this.graphics[x, row] = false;
+                this.graphics[x + (row * this.ScreenWidth)] = false;
             }
         }
 
@@ -1073,7 +1074,7 @@
         {
             for (int y = 0; y < this.ScreenHeight; ++y)
             {
-                this.graphics[column, y] = false;
+                this.graphics[column + (y * this.ScreenWidth)] = false;
             }
         }
 
@@ -1081,7 +1082,7 @@
         {
             for (int x = 0; x < this.ScreenWidth; ++x)
             {
-                this.graphics[x, from] = this.graphics[x, to];
+                this.graphics[x + (from * this.ScreenWidth)] = this.graphics[x + (to * this.ScreenWidth)];
             }
         }
 
@@ -1089,8 +1090,13 @@
         {
             for (int y = 0; y < this.ScreenHeight; ++y)
             {
-                this.graphics[from, y] = this.graphics[to, y];
+                this.graphics[from + (y * this.ScreenWidth)] = this.graphics[to + (y * this.ScreenWidth)];
             }
+        }
+
+        private void ClearGraphics()
+        {
+            Array.Clear(this.graphics, 0, this.ScreenWidth * this.ScreenHeight);
         }
     }
 }

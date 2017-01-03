@@ -33,7 +33,25 @@
             {
                 if (disposing)
                 {
-                    this.soundPlayer.Dispose();
+                    if (this.soundPlayer != null)
+                    {
+                        this.soundPlayer.Dispose();
+                    }
+
+                    if (this.soundPlayer != null)
+                    {
+                        this.graphics.Dispose();
+                    }
+
+                    if (this.soundPlayer != null)
+                    {
+                        this.pixel.Dispose();
+                    }
+
+                    if (this.soundPlayer != null)
+                    {
+                        this.spriteBatch.Dispose();
+                    }
                 }
 
                 this.disposed = true;
@@ -83,7 +101,7 @@
 
         protected override void Update(GameTime gameTime)
         {
-            var cyclesPerFrame = 20;
+            var cyclesPerFrame = 30;
             for (int i = 0; i < cyclesPerFrame; ++i)
             {
                 if (this.processor.Finished)
@@ -131,7 +149,7 @@
                 {
                     for (int y = 0; y < this.processor.ScreenHeight; y++)
                     {
-                        if (this.processor.Graphics[x, y])
+                        if (this.processor.Graphics[x + (y * this.processor.ScreenWidth)])
                         {
                             this.spriteBatch.Draw(this.pixel, new Rectangle(x * pixelSize, y * pixelSize, pixelSize, pixelSize), Color.White);
                         }

@@ -2,10 +2,12 @@
 {
     internal class Program
     {
-        public static void Main(string[] args)
+        public static void Main()
         {
-            var controller = new Controller();
-            controller.Run();
+            using (var controller = new Controller())
+            {
+                controller.Run();
+            }
         }
     }
 }
