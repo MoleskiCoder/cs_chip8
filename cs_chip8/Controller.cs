@@ -97,6 +97,23 @@
             ////this.processor.LoadGame(@"SGAMES\TEST");
             ////this.processor.LoadGame(@"SGAMES\UBOAT");
             ////this.processor.LoadGame(@"SGAMES\WORM3");
+
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Flip-8 logo [Newsdee, 2006].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Kyori (SC example) [Hap, 2005].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Let's Chip-8! [Koppepan, 2005].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer (16x16 tiles) (MAME) [IQ_132].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer (Google) [IQ_132].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Emutest [Hap, 2006].ch8");    // XXXX Wrong!!
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Font Test [Newsdee, 2006].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Hex Mixt.ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Line Demo.ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\SC Test.ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\SCHIP Test [iq_132].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Scroll Test (modified) [Garstyciuks].ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Scroll Test.ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\SuperChip Test.ch8");
+            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Test128.ch8");
+
         }
 
         protected override void Update(GameTime gameTime)
