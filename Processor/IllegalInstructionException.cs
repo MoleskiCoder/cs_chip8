@@ -5,25 +5,24 @@
     [Serializable]
     public class IllegalInstructionException : Exception
     {
-        private ushort opCode;
+        private ushort instructionCode;
 
-        public IllegalInstructionException(ushort opCode)
-        : this(opCode, "Illegal Chip8 instruction")
+        public IllegalInstructionException(ushort instructionCode)
+        : this(instructionCode, "Illegal Chip8 instruction")
         {
-            this.opCode = opCode;
         }
 
-        public IllegalInstructionException(ushort opCode, string message)
+        public IllegalInstructionException(ushort instructionCode, string message)
         : base(message)
         {
-            this.opCode = opCode;
+            this.instructionCode = instructionCode;
         }
 
-        public ushort OpCode
+        public ushort InstructionCode
         {
             get
             {
-                return this.opCode;
+                return this.instructionCode;
             }
         }
     }
