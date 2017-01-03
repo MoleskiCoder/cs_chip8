@@ -577,13 +577,13 @@
             // Copy rows bottom to top
             for (int y = this.ScreenHeight - n - 1; y > 0; --y)
             {
-                this.CopyGraphicsRow(y, y + n);
+                this.CopyGraphicsRow(y + n, y);
             }
 
             // Remove the top columns, blanked by the scroll effect
             for (int y = 0; y < n; ++y)
             {
-                this.ClearGraphicsColumn(y);
+                this.ClearGraphicsRow(y);
             }
 
 
