@@ -579,8 +579,10 @@
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SCDOWN\t{0:X1}", n));
 
+            var screenHeight = this.ScreenHeight;
+
             // Copy rows bottom to top
-            for (int y = this.ScreenHeight - n - 1; y >= 0; --y)
+            for (int y = screenHeight - n - 1; y >= 0; --y)
             {
                 this.CopyGraphicsRow(y + n, y);
             }
@@ -614,11 +616,13 @@
         {
             System.Diagnostics.Debug.Write("SCRIGHT");
 
+            var screenWidth = this.ScreenWidth;
+
             // Scroll distance
             var n = 4;
 
             // Copy colummns from right to left
-            for (int x = this.ScreenWidth - n - 1; x >= 0; --x)
+            for (int x = screenWidth - n - 1; x >= 0; --x)
             {
                 this.CopyGraphicsColumn(x + n, x);
             }
@@ -641,17 +645,19 @@
         {
             System.Diagnostics.Debug.Write("SCLEFT");
 
+            var screenWidth = this.ScreenWidth;
+
             // Scroll distance
             var n = 4;
 
             // Copy columns from left to right
-            for (int x = 0; x < this.ScreenWidth - n - 1; ++x)
+            for (int x = 0; x < screenWidth - n - 1; ++x)
             {
                 this.CopyGraphicsColumn(x, x + n);
             }
 
             // Remove the rightmost columns, blanked by the scroll effect
-            for (int x = this.ScreenWidth - n - 1; x < this.ScreenWidth; ++x)
+            for (int x = screenWidth - n - 1; x < screenWidth; ++x)
             {
                 this.ClearGraphicsColumn(x);
             }
@@ -1028,6 +1034,9 @@
 
         private void Draw(int x, int y, int width, int height, int bytesPerRow)
         {
+            var screenWidth = this.ScreenWidth;
+            var screenHeight = this.ScreenHeight;
+
             var drawX = this.v[x];
             var drawY = this.v[y];
 
@@ -1036,6 +1045,7 @@
             for (var row = 0; row < height; ++row)
             {
                 var cellY = drawY + row;
+                var cellRowOffset = cellY * screenWidth;
                 var pixelAddress = this.i + (row * bytesPerRow);
                 for (var column = 0; column < width; ++column)
                 {
@@ -1045,9 +1055,9 @@
                     if (pixel)
                     {
                         var cellX = drawX + column;
-                        if ((cellX < this.ScreenWidth) && (cellY < this.ScreenHeight))
+                        if ((cellX < screenWidth) && (cellY < screenHeight))
                         {
-                            var cell = cellX + (cellY * this.ScreenWidth);
+                            var cell = cellX + cellRowOffset;
                             if (this.graphics[cell])
                             {
                                 this.v[0xf] = 1;
@@ -1064,33 +1074,43 @@
 
         private void ClearGraphicsRow(int row)
         {
-            for (int x = 0; x < this.ScreenWidth; ++x)
+            var width = this.ScreenWidth;
+            var height = this.ScreenHeight;
+            var rowOffset = row * width;
+            for (int x = 0; x < width; ++x)
             {
-                this.graphics[x + (row * this.ScreenWidth)] = false;
+                this.graphics[x + rowOffset] = false;
             }
         }
 
         private void ClearGraphicsColumn(int column)
         {
-            for (int y = 0; y < this.ScreenHeight; ++y)
+            var width = this.ScreenWidth;
+            var height = this.ScreenHeight;
+            for (int y = 0; y < height; ++y)
             {
-                this.graphics[column + (y * this.ScreenWidth)] = false;
+                this.graphics[column + (y * width)] = false;
             }
         }
 
         private void CopyGraphicsRow(int from, int to)
         {
-            for (int x = 0; x < this.ScreenWidth; ++x)
+            var width = this.ScreenWidth;
+            var fromRowOffset = from * width;
+            var toRowOffset = to * width;
+            for (int x = 0; x < width; ++x)
             {
-                this.graphics[x + (from * this.ScreenWidth)] = this.graphics[x + (to * this.ScreenWidth)];
+                this.graphics[x + fromRowOffset] = this.graphics[x + toRowOffset];
             }
         }
 
         private void CopyGraphicsColumn(int from, int to)
         {
-            for (int y = 0; y < this.ScreenHeight; ++y)
+            var width = this.ScreenWidth;
+            var height = this.ScreenHeight;
+            for (int y = 0; y < height; ++y)
             {
-                this.graphics[from + (y * this.ScreenWidth)] = this.graphics[to + (y * this.ScreenWidth)];
+                this.graphics[from + (y * width)] = this.graphics[to + (y * width)];
             }
         }
 

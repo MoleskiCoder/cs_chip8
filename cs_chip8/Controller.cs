@@ -142,16 +142,22 @@
         private void Draw()
         {
             var pixelSize = this.processor.PixelSize;
+            var screenWidth = this.processor.ScreenWidth;
+            var screenHeight = this.processor.ScreenHeight;
+
             this.spriteBatch.Begin();
             try
             {
-                for (int x = 0; x < this.processor.ScreenWidth; x++)
+                for (int y = 0; y < screenHeight; y++)
                 {
-                    for (int y = 0; y < this.processor.ScreenHeight; y++)
+                    var rowOffset = y * screenWidth;
+                    var rectanglePositionY = y * pixelSize;
+                    for (int x = 0; x < screenWidth; x++)
                     {
-                        if (this.processor.Graphics[x + (y * this.processor.ScreenWidth)])
+                        if (this.processor.Graphics[x + rowOffset])
                         {
-                            this.spriteBatch.Draw(this.pixel, new Rectangle(x * pixelSize, y * pixelSize, pixelSize, pixelSize), Color.White);
+                            var rectanglePositionX = x * pixelSize;
+                            this.spriteBatch.Draw(this.pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), Color.White);
                         }
                     }
                 }
