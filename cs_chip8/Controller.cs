@@ -162,6 +162,8 @@
             var screenWidth = this.processor.ScreenWidth;
             var screenHeight = this.processor.ScreenHeight;
 
+            var graphics = this.processor.Graphics;
+
             this.spriteBatch.Begin();
             try
             {
@@ -171,7 +173,7 @@
                     var rectanglePositionY = y * pixelSize;
                     for (int x = 0; x < screenWidth; x++)
                     {
-                        if (this.processor.Graphics[x + rowOffset])
+                        if (graphics[x + rowOffset])
                         {
                             var rectanglePositionX = x * pixelSize;
                             this.spriteBatch.Draw(this.pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), Color.White);

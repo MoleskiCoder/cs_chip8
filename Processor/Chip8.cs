@@ -690,10 +690,7 @@
         private void LD_R_Vx(int x)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tR,V{0:X1}", x));
-            for (int register = 0; register <= x; ++register)
-            {
-                this.r[register] = this.v[register];
-            }
+            Array.Copy(this.v, this.r, x + 1);
         }
 
         // flags.restore vX
@@ -703,10 +700,7 @@
         private void LD_Vx_R(int x)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},R", x));
-            for (int register = 0; register <= x; ++register)
-            {
-                this.v[register] = this.r[register];
-            }
+            Array.Copy(this.r, this.v, x + 1);
         }
 
         // exit
@@ -1075,12 +1069,7 @@
         private void ClearGraphicsRow(int row)
         {
             var width = this.ScreenWidth;
-            var height = this.ScreenHeight;
-            var rowOffset = row * width;
-            for (int x = 0; x < width; ++x)
-            {
-                this.graphics[x + rowOffset] = false;
-            }
+            Array.Clear(this.graphics, row * width, width);
         }
 
         private void ClearGraphicsColumn(int column)
@@ -1096,12 +1085,7 @@
         private void CopyGraphicsRow(int from, int to)
         {
             var width = this.ScreenWidth;
-            var fromRowOffset = from * width;
-            var toRowOffset = to * width;
-            for (int x = 0; x < width; ++x)
-            {
-                this.graphics[x + fromRowOffset] = this.graphics[x + toRowOffset];
-            }
+            Array.Copy(this.graphics, to * width, this.graphics, from * width, width);
         }
 
         private void CopyGraphicsColumn(int from, int to)
