@@ -181,14 +181,6 @@
             }
         }
 
-        public int PixelSize
-        {
-            get
-            {
-                return this.HighResolution ? 5 : 10;
-            }
-        }
-
         public bool SoundPlaying
         {
             get

@@ -5,28 +5,47 @@
 
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
+    using Microsoft.Xna.Framework.Input;
 
     using Processor;
 
     internal class Controller : Game, IDisposable
     {
+        private const Keys ToggleKey = Keys.F12;
+        private const int CyclesPerFrame = 30;
+
+        private readonly string game;
+        private readonly GraphicsDeviceManager graphics;
+        private readonly SoundPlayer soundPlayer = new SoundPlayer();
+
+        private readonly Color backgroundColour = Color.Black;
+        private readonly Color foregroundColour = Color.White;
+
         private Chip8 processor;
 
-        private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
         private Texture2D pixel;
 
-        private SoundPlayer soundPlayer = new SoundPlayer();
+        private bool wasToggleKeyPressed;
 
         private bool disposed = false;
 
-        public Controller()
+        public Controller(string game)
         {
+            this.game = game;
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
         }
 
-        protected override void Dispose(bool disposing)
+        private int PixelSize
+        {
+            get
+            {
+                return this.processor.HighResolution ? 5 : 10;
+            }
+        }
+
+       protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
             if (!this.disposed)
@@ -65,7 +84,7 @@
             this.spriteBatch = new SpriteBatch(GraphicsDevice);
 
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
-            this.pixel.SetData<Color>(new Color[] { Color.Black });
+            this.pixel.SetData<Color>(new Color[] { this.foregroundColour });
 
             this.processor = new Chip8();
 
@@ -78,48 +97,12 @@
 
             this.processor.Initialise();
 
-            ////this.processor.LoadGame(@"GAMES\PONG.ch8");
-
-            ////this.processor.LoadGame(@"SGAMES\ALIEN");
-            ////this.processor.LoadGame(@"SGAMES\ANT");
-            ////this.processor.LoadGame(@"SGAMES\BLINKY");
-            ////this.processor.LoadGame(@"SGAMES\CAR");
-            ////this.processor.LoadGame(@"SGAMES\DRAGON1");
-            ////this.processor.LoadGame(@"SGAMES\DRAGON2");
-            ////this.processor.LoadGame(@"SGAMES\FIELD");
-            ////this.processor.LoadGame(@"SGAMES\JOUST23");
-            ////this.processor.LoadGame(@"SGAMES\MAZE");
-            ////this.processor.LoadGame(@"SGAMES\MINES");
-            ////this.processor.LoadGame(@"SGAMES\PIPER");
-            ////this.processor.LoadGame(@"SGAMES\RACE");
-            this.processor.LoadGame(@"SGAMES\SPACEFIG");
-            ////this.processor.LoadGame(@"SGAMES\SQUARE");
-            ////this.processor.LoadGame(@"SGAMES\TEST");
-            ////this.processor.LoadGame(@"SGAMES\UBOAT");
-            ////this.processor.LoadGame(@"SGAMES\WORM3");
-
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Flip-8 logo [Newsdee, 2006].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Kyori (SC example) [Hap, 2005].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Let's Chip-8! [Koppepan, 2005].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer (16x16 tiles) (MAME) [IQ_132].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\BMP Viewer (Google) [IQ_132].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Emutest [Hap, 2006].ch8");    // XXXX Wrong!!
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Font Test [Newsdee, 2006].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Hex Mixt.ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Line Demo.ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\SC Test.ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\SCHIP Test [iq_132].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Scroll Test (modified) [Garstyciuks].ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Scroll Test.ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\SuperChip Test.ch8");
-            ////this.processor.LoadGame(@"Chip-8 Pack\SuperChip Test Programs\Test128.ch8");
-
+            this.processor.LoadGame(this.game);
         }
 
         protected override void Update(GameTime gameTime)
         {
-            var cyclesPerFrame = 30;
-            for (int i = 0; i < cyclesPerFrame; ++i)
+            for (int i = 0; i < CyclesPerFrame; ++i)
             {
                 if (this.processor.Finished)
                 {
@@ -135,16 +118,17 @@
             }
 
             this.processor.UpdateTimers();
+            this.CheckFullScreen();
             base.Update(gameTime);
         }
-            
+
         protected override void Draw(GameTime gameTime)
         {
             if (this.processor.DrawNeeded)
             {
                 try
                 {
-                    this.graphics.GraphicsDevice.Clear(Color.CornflowerBlue);
+                    this.graphics.GraphicsDevice.Clear(this.backgroundColour);
                     this.Draw();
                 }
                 finally
@@ -158,7 +142,7 @@
 
         private void Draw()
         {
-            var pixelSize = this.processor.PixelSize;
+            var pixelSize = this.PixelSize;
             var screenWidth = this.processor.ScreenWidth;
             var screenHeight = this.processor.ScreenHeight;
 
@@ -187,6 +171,17 @@
             }
         }
 
+        private void CheckFullScreen()
+        {
+            var toggleKeyPressed = Keyboard.GetState().IsKeyDown(ToggleKey);
+            if (toggleKeyPressed && !this.wasToggleKeyPressed)
+            {
+                this.graphics.ToggleFullScreen();
+            }
+
+            this.wasToggleKeyPressed = toggleKeyPressed;
+        }
+
         private void Processor_BeepStarting(object sender, EventArgs e)
         {
             this.soundPlayer.PlayLooping();
@@ -209,8 +204,8 @@
 
         private void ChangeResolution(int width, int height)
         {
-            this.graphics.PreferredBackBufferWidth = this.processor.PixelSize * width;
-            this.graphics.PreferredBackBufferHeight = this.processor.PixelSize * height;
+            this.graphics.PreferredBackBufferWidth = this.PixelSize * width;
+            this.graphics.PreferredBackBufferHeight = this.PixelSize * height;
             this.graphics.ApplyChanges();
         }
 
