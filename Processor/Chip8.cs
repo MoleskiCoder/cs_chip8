@@ -254,26 +254,43 @@
         {
             this.HighResolution = true;
             this.AllocateGraphicsMemory();
-            this.HighResolutionConfigured?.Invoke(this, EventArgs.Empty);
+            var handler = HighResolutionConfigured;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
         }
 
         protected void OnLowResolution()
         {
             this.HighResolution = false;
             this.AllocateGraphicsMemory();
-            this.LowResolutionConfigured?.Invoke(this, EventArgs.Empty);
+            var handler = this.LowResolutionConfigured;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
         }
 
         protected void OnBeepStarting()
         {
-            this.BeepStarting?.Invoke(this, EventArgs.Empty);
+            var handler = this.BeepStarting;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+
             this.SoundPlaying = true;
         }
 
         protected void OnBeepStopped()
         {
-           this.SoundPlaying = false;
-           this.BeepStopped?.Invoke(this, EventArgs.Empty);
+            this.SoundPlaying = false;
+            var handler = this.BeepStopped;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
         }
 
         private void WaitForKeyPress()

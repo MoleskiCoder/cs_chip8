@@ -12,6 +12,7 @@ StyleCop.cache
 
 *.psess
 
+*.suo
 *.csproj.user
 *.vsp
 
