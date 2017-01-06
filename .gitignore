@@ -14,5 +14,6 @@ StyleCop.cache
 
 *.csproj.user
 *.vsp
+*.suo
 
 *.log
