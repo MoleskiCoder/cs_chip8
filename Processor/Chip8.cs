@@ -3,6 +3,7 @@
     using System;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Text;
     using Microsoft.Xna.Framework.Input;
 
@@ -57,28 +58,12 @@
             0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0x80, 0x00, // F
         };
 
-        private byte[] memory = new byte[4096];
-        private byte[] v = new byte[16];
-        private short i;
-        private short pc;
-        private bool[] graphics;
-        private byte delayTimer;
-        private byte soundTimer;
-        private ushort[] stack = new ushort[16];
-        private ushort sp;
-
-        private byte[] r = new byte[8]; // HP48 flags
-
-        private bool drawNeeded;
-
-        private bool soundPlaying = false;
-
         // CHIP-8 Keyboard layout
         //  1   2   3   C
         //  4   5   6   D
         //  7   8   9   E
         //  A   0   B   F
-        private Keys[] key = new Keys[]
+        private readonly Keys[] key = new Keys[]
         {
                         Keys.X,
                 
@@ -94,13 +79,38 @@
                                                 Keys.V
         };
 
+        private readonly EmulationType emulating;
+
+        private readonly Random randomNumbers = new Random();
+
+        private readonly byte[] memory = new byte[4096];
+        private readonly byte[] v = new byte[16];
+        private readonly ushort[] stack = new ushort[16];
+        private readonly byte[] r = new byte[8]; // HP48 flags
+
+        private short i;
+        private short pc;
+        private bool[] graphics;
+        private byte delayTimer;
+        private byte soundTimer;
+        private ushort sp;
+
+        private ushort opcode;
+
+        private bool drawNeeded;
+
+        private bool soundPlaying = false;
+
         private bool waitingForKeyPress;
         private int waitingForKeyPressRegister;
 
-        private Random randomNumbers = new Random();
-
         private bool highResolution = false;
         private bool finished = false;
+
+        public Chip8(EmulationType emulating)
+        {
+            this.emulating = emulating;
+        }
 
         public event EventHandler<EventArgs> HighResolutionConfigured;
 
@@ -294,18 +304,18 @@
         {
             var high = this.memory[this.pc];
             var low = this.memory[this.pc + 1];
-            var opcode = (ushort)((high << 8) + low);
-            var nnn = (short)(opcode & 0xfff);
+            this.opcode = (ushort)((high << 8) + low);
+            var nnn = (short)(this.opcode & 0xfff);
             var nn = low;
             var n = low & 0xf;
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
 
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, opcode));
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode));
 
             this.pc += 2;
 
-            switch (opcode & 0xf000)
+            switch (this.opcode & 0xf000)
             {
                 case 0x0000:    // Call
                     switch (low)
@@ -350,7 +360,7 @@
                                     break;
 
                                 default:
-                                    throw new IllegalInstructionException(opcode, "RCA1802 Call");
+                                    throw new IllegalInstructionException(this.opcode, "RCA1802 Call");
                             }
 
                             break;
@@ -419,7 +429,7 @@
                             break;
 
                         case 0x6:   // 8XY6     Math        Vx >> 1
-                            this.SHR(x);
+                            this.SHR(x, y);
                             break;
 
                         case 0x7:   // 8XY7     Math        Vx=Vy-Vx
@@ -427,11 +437,11 @@
                             break;
 
                         case 0xe:   // 8XYE     Math        Vx << 1
-                            this.SHL(x);
+                            this.SHL(x, y);
                             break;
 
                         default:
-                            throw new IllegalInstructionException(opcode);
+                            throw new IllegalInstructionException(this.opcode);
                     }
 
                     break;
@@ -444,7 +454,7 @@
                             break;
 
                         default:
-                            throw new IllegalInstructionException(opcode);
+                            throw new IllegalInstructionException(this.opcode);
                     }
 
                     break;
@@ -454,7 +464,7 @@
                     break;
 
                 case 0xB000:        // BNNN     Flow        PC=V0+NNN
-                    this.JP_V0(nnn);
+                    this.JP_V0(x, nnn);
                     break;
 
                 case 0xc000:        // CXNN     Rand        Vx=rand()&NN
@@ -487,7 +497,7 @@
                             break;
 
                         default:
-                            throw new IllegalInstructionException(opcode);
+                            throw new IllegalInstructionException(this.opcode);
                     }
 
                     break;
@@ -548,13 +558,13 @@
                             break;
 
                         default:
-                            throw new IllegalInstructionException(opcode);
+                            throw new IllegalInstructionException(this.opcode);
                     }
 
                     break;
 
                 default:
-                    throw new IllegalInstructionException(opcode);
+                    throw new IllegalInstructionException(this.opcode);
             }
 
             System.Diagnostics.Debug.WriteLine(string.Empty);
@@ -569,6 +579,8 @@
         // Code generated: 0x00Cn
         private void SCDOWN(int n)
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SCDOWN\t{0:X1}", n));
 
             var screenHeight = this.ScreenHeight;
@@ -606,6 +618,8 @@
         // Code generated: 0x00FB
         private void SCRIGHT()
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write("SCRIGHT");
 
             var screenWidth = this.ScreenWidth;
@@ -635,6 +649,8 @@
         // Code generated: 0x00FC
         private void SCLEFT()
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write("SCLEFT");
 
             var screenWidth = this.ScreenWidth;
@@ -662,6 +678,8 @@
         // Code generated: 0x00FE
         private void LOW()
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write("LOW");
             this.OnLowResolution();
         }
@@ -671,6 +689,8 @@
         // Code generated: 0x00FF
         private void HIGH()
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write("HIGH");
             this.OnHighResolution();
         }
@@ -681,6 +701,8 @@
         // Code generated: 0xFX75
         private void LD_R_Vx(int x)
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tR,V{0:X1}", x));
             Array.Copy(this.v, this.r, x + 1);
         }
@@ -691,6 +713,8 @@
         // Code generated: 0xFX85
         private void LD_Vx_R(int x)
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},R", x));
             Array.Copy(this.r, this.v, x + 1);
         }
@@ -701,6 +725,8 @@
         // Code generated: 0x00FD.
         private void EXIT()
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write("EXIT");
             this.Finished = true;
         }
@@ -810,10 +836,22 @@
             this.v[x] -= this.v[y];
         }
 
-        private void SHR(int x)
+        private void SHR(int x, int y)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SHR\tV{0:X1}", x));
-            this.v[x] >>= 1;
+
+            // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
+            // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
+            if (this.emulating == EmulationType.VIP)
+            {
+                this.v[y] >>= 1;
+                this.v[x] = this.v[y];
+            }
+            else
+            {
+                this.v[x] >>= 1;
+            }
+
             this.v[0xf] = (byte)(this.v[x] & 0x1);
         }
 
@@ -824,11 +862,23 @@
             this.v[x] = (byte)(this.v[y] - this.v[x]);
         }
 
-        private void SHL(int x)
+        private void SHL(int x, int y)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SHL\tV{0:X1}", x));
+
             this.v[0xf] = (byte)((this.v[x] & 0x80) == 0 ? 0 : 1);
-            this.v[x] <<= 1;
+
+            // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
+            // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
+            if (this.emulating == EmulationType.VIP)
+            {
+                this.v[y] <<= 1;
+                this.v[x] = this.v[y];
+            }
+            else
+            {
+                this.v[x] <<= 1;
+            }
         }
 
         private void SNE(int x, int y)
@@ -846,10 +896,17 @@
             this.i = nnn;
         }
 
-        private void JP_V0(short nnn)
+        private void JP_V0(int x, short nnn)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "JP\t[V0],#{0:X3}", nnn));
-            this.pc = (short)(this.v[0] + nnn);
+
+            // https://github.com/Chromatophore/HP48-Superchip#bnnn
+            // Sets PC to address NNN + v0 -
+            //  VIP: correctly jumps based on v0
+            //  HP48 -SC: reads highest nibble of address to select
+            //      register to apply to address (high nibble pulls double duty)
+            var register = this.emulating == EmulationType.HP48 ? x : 0;
+            this.pc = (short)(this.v[register] + nnn);
         }
 
         private void RND(int x, byte nn)
@@ -860,6 +917,8 @@
 
         private void XDRW(int x, int y)
         {
+            this.VerifyRunningHp48();
+
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "XDRW V{0:X1},V{1:X1}", x, y));
             this.Draw(x, y, 16, 16);
         }
@@ -892,12 +951,26 @@
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},[I]", x));
             Array.Copy(this.memory, this.i, this.v, 0, x + 1);
+
+            // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
+            // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
+            if (this.emulating == EmulationType.VIP)
+            {
+                this.i += (short)(x + 1);
+            }
         }
 
         private void LD_II_Vx(int x)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\t[I],V{0:X1}", x));
             Array.Copy(this.v, 0, this.memory, this.i, x + 1);
+
+            // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
+            // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
+            if (this.emulating == EmulationType.VIP)
+            {
+                this.i += (short)(x + 1);
+            }
         }
 
         private void LD_B_Vx(int x)
@@ -1015,11 +1088,33 @@
 
         private void AllocateGraphicsMemory()
         {
+            var previous = this.graphics;
             this.graphics = new bool[this.ScreenWidth * this.ScreenHeight];
+
+            // https://github.com/Chromatophore/HP48-Superchip#swapping-display-modes
+            // Superchip has two different display modes, 64x32 and 128x64. When swapped between,
+            // the display buffer is not cleared. Pixels are modified based on being XORed in 1x2 vertical
+            // columns, so odd patterns can be created.
+            if (previous != null)
+            {
+                Array.Copy(previous, 0, this.graphics, 0, Math.Min(previous.Length, this.graphics.Length));
+            }
         }
 
         private void Draw(int x, int y, int width, int height)
         {
+            //// https://github.com/Chromatophore/HP48-Superchip#collision-enumeration
+            //// An interesting and apparently often unnoticed change to the Super Chip spec is the
+            //// following: All drawing is done in XOR mode. If this causes one or more pixels to be
+            //// erased, VF is <> 00, other-wise 00. In extended screen mode (aka hires), SCHIP 1.1
+            //// will report the number of rows that include a pixel that XORs with the existing data,
+            //// so the 'correct' way to detect collisions is Vf <> 0 rather than Vf == 1.
+
+            //// https://github.com/Chromatophore/HP48-Superchip#collision-with-the-bottom-of-the-screen
+            //// Sprites that are drawn such that they contain data that runs off of the bottom of the
+            //// screen will set Vf based on the number of lines that run off of the screen,
+            //// as if they are colliding.
+
             var screenWidth = this.ScreenWidth;
             var screenHeight = this.ScreenHeight;
 
@@ -1028,7 +1123,7 @@
             var drawX = this.v[x];
             var drawY = this.v[y];
 
-            this.v[0xf] = 0;
+            var rowHits = new int[height];
 
             for (var row = 0; row < height; ++row)
             {
@@ -1048,7 +1143,7 @@
                             var cell = cellX + cellRowOffset;
                             if (this.graphics[cell])
                             {
-                                this.v[0xf] = 1;
+                                rowHits[row]++;
                             }
 
                             this.graphics[cell] ^= true;
@@ -1056,6 +1151,8 @@
                     }
                 }
             }
+
+            this.v[0xf] = (byte)(from rowHit in rowHits where rowHit > 0 select rowHit).Count();
 
             this.drawNeeded = true;
         }
@@ -1095,6 +1192,14 @@
         private void ClearGraphics()
         {
             Array.Clear(this.graphics, 0, this.ScreenWidth * this.ScreenHeight);
+        }
+
+        private void VerifyRunningHp48()
+        {
+            if (this.emulating < EmulationType.HP48)
+            {
+                throw new IllegalInstructionException(this.opcode, "Illegal when not running in HP-48 mode");
+            }
         }
     }
 }

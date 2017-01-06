@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Chip8.cs" />
+    <Compile Include="EmulationType.cs" />
     <Compile Include="IllegalInstructionException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -12,8 +12,10 @@
     internal class Controller : Game, IDisposable
     {
         private const Keys ToggleKey = Keys.F12;
-        private const int CyclesPerFrame = 30;
+        private const int CyclesPerFrameFast = 30;
+        private const int CyclesPerFrameSlow = 10;
 
+        private readonly EmulationType machineType;
         private readonly string game;
         private readonly GraphicsDeviceManager graphics;
         private readonly SoundPlayer soundPlayer = new SoundPlayer();
@@ -30,8 +32,9 @@
 
         private bool disposed = false;
 
-        public Controller(string game)
+        public Controller(EmulationType machineType, string game)
         {
+            this.machineType = machineType;
             this.game = game;
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
@@ -45,7 +48,28 @@
             }
         }
 
-       protected override void Dispose(bool disposing)
+        // https://github.com/Chromatophore/HP48-Superchip#platform-speed
+        // The HP48 calculator is much faster than the Cosmac VIP, but,
+        // there is still no solid understanding of how much faster it is for
+        // most instructions for the purposes of designing compelling programs with
+        // Octo. A modified version of cmark77, a Chip-8 graphical benchmark tool
+        // written by taqueso on the Something Awful forums was used and
+        // yielded scores of 0.80 kOPs in standard/lores and 1.3 kOps in extended/hires.
+        // However graphical ops are significantly more costly than other ops on period
+        // hardware versus Octo (where they are basically free) and as a result a raw
+        // computational cycles/second speed assessment still has not been completed.
+        private int CyclesPerFrame
+        {
+            get
+            {
+                // The following gives:
+                //  HP-48 running at 1.32 kOps
+                //  VIP running at .78 kOps
+                return this.machineType == EmulationType.HP48 ? 22 : 13;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
             if (!this.disposed)
@@ -86,7 +110,7 @@
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
             this.pixel.SetData<Color>(new Color[] { this.foregroundColour });
 
-            this.processor = new Chip8();
+            this.processor = new Chip8(this.machineType);
 
             this.SetLowResolution();
 
@@ -102,7 +126,7 @@
 
         protected override void Update(GameTime gameTime)
         {
-            for (int i = 0; i < CyclesPerFrame; ++i)
+            for (int i = 0; i < this.CyclesPerFrame; ++i)
             {
                 if (this.processor.Finished)
                 {
