@@ -107,6 +107,8 @@
         private bool highResolution = false;
         private bool finished = false;
 
+        private bool compatibility = false;
+
         public Chip8(EmulationType emulating)
         {
             this.emulating = emulating;
@@ -330,6 +332,11 @@
             var n = low & 0xf;
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
+
+            if ((this.pc % 2) == 1)
+            {
+                throw new InvalidOperationException("Instruction is not on an aligned address");
+            }
 
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode));
 
@@ -627,8 +634,8 @@
         // Code generated: 0x00FA
         private void COMPATIBILITY()
         {
-            System.Diagnostics.Debug.Write("* COMPATIBILITY");
-            throw new InvalidOperationException("COMPATIBILITY unimplemented");
+            System.Diagnostics.Debug.Write("COMPATIBILITY");
+            this.compatibility = true;
         }
 
         // scright
@@ -974,7 +981,7 @@
 
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
-            if (this.emulating == EmulationType.VIP)
+            if (this.compatibility || (this.emulating == EmulationType.VIP))
             {
                 this.i += (short)(x + 1);
             }
@@ -987,7 +994,7 @@
 
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
-            if (this.emulating == EmulationType.VIP)
+            if (this.compatibility || (this.emulating == EmulationType.VIP))
             {
                 this.i += (short)(x + 1);
             }
