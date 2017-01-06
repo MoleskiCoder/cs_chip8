@@ -1,4 +1,4 @@
-﻿namespace Emulator
+﻿namespace Processor
 {
     using System;
     using System.Media;
@@ -7,9 +7,7 @@
     using Microsoft.Xna.Framework.Graphics;
     using Microsoft.Xna.Framework.Input;
 
-    using Processor;
-
-    internal class Controller : Game, IDisposable
+    public class Controller : Game, IDisposable
     {
         private const Keys ToggleKey = Keys.F12;
         private const int CyclesPerFrameFast = 30;

@@ -46,7 +46,7 @@
             ////var game = @"Chip-8 Pack\SuperChip Demos\Super Particle Demo [zeroZshadow, 2008].ch8";
             ////var game = @"Chip-8 Pack\SuperChip Demos\SCSerpinski [Sergey Naydenov, 2010].ch8";
 
-            using (var controller = new Controller(machineType, game))
+            using (var controller = new Processor.Controller(machineType, game))
             {
                 controller.Run();
             }
