@@ -861,13 +861,13 @@
         private void XDRW(int x, int y)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "XDRW V{0:X1},V{1:X1}", x, y));
-            this.Draw(x, y, 16, 16, 2);
+            this.Draw(x, y, 16, 16);
         }
 
         private void DRW(int x, int y, int n)
         {
             System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
-            this.Draw(x, y, 8, n, 1);
+            this.Draw(x, y, 8, n);
         }
 
         private void SKP(int x)
@@ -1018,10 +1018,12 @@
             this.graphics = new bool[this.ScreenWidth * this.ScreenHeight];
         }
 
-        private void Draw(int x, int y, int width, int height, int bytesPerRow)
+        private void Draw(int x, int y, int width, int height)
         {
             var screenWidth = this.ScreenWidth;
             var screenHeight = this.ScreenHeight;
+
+            var bytesPerRow = width / 8;
 
             var drawX = this.v[x];
             var drawY = this.v[y];
