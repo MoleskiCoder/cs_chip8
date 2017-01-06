@@ -869,7 +869,7 @@
 
             // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
             // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
-            if (this.emulating == EmulationType.VIP)
+            if (this.emulating == EmulationType.ComsmacVip)
             {
                 this.v[y] >>= 1;
                 this.v[x] = this.v[y];
@@ -897,7 +897,7 @@
 
             // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
             // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
-            if (this.emulating == EmulationType.VIP)
+            if (this.emulating == EmulationType.ComsmacVip)
             {
                 this.v[y] <<= 1;
                 this.v[x] = this.v[y];
@@ -981,7 +981,7 @@
 
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
-            if (this.compatibility || (this.emulating == EmulationType.VIP))
+            if (this.compatibility || (this.emulating == EmulationType.ComsmacVip))
             {
                 this.i += (short)(x + 1);
             }
@@ -994,7 +994,7 @@
 
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
-            if (this.compatibility || (this.emulating == EmulationType.VIP))
+            if (this.compatibility || (this.emulating == EmulationType.ComsmacVip))
             {
                 this.i += (short)(x + 1);
             }

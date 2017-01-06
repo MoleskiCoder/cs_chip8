@@ -2,7 +2,7 @@
 {
     public enum EmulationType
     {
-        VIP,
+        ComsmacVip,
         HP48
     }
 }
