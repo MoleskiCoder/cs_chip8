@@ -267,7 +267,7 @@
             this.HighResolution = true;
             this.AllocateGraphicsMemory();
 
-            var handler = HighResolutionConfigured;
+            var handler = this.HighResolutionConfigured;
             if (handler != null)
             {
                 handler(this, EventArgs.Empty);
@@ -279,7 +279,7 @@
             this.HighResolution = false;
             this.AllocateGraphicsMemory();
 
-            var handler = LowResolutionConfigured;
+            var handler = this.LowResolutionConfigured;
             if (handler != null)
             {
                 handler(this, EventArgs.Empty);
@@ -288,7 +288,7 @@
 
         protected void OnBeepStarting()
         {
-            var handler = BeepStarting;
+            var handler = this.BeepStarting;
             if (handler != null)
             {
                 handler(this, EventArgs.Empty);
@@ -301,7 +301,7 @@
         {
            this.SoundPlaying = false;
 
-            var handler = BeepStopped;
+            var handler = this.BeepStopped;
             if (handler != null)
             {
                 handler(this, EventArgs.Empty);
