@@ -57,17 +57,17 @@
                         this.soundPlayer.Dispose();
                     }
 
-                    if (this.soundPlayer != null)
+                    if (this.graphics != null)
                     {
                         this.graphics.Dispose();
                     }
 
-                    if (this.soundPlayer != null)
+                    if (this.pixel != null)
                     {
                         this.pixel.Dispose();
                     }
 
-                    if (this.soundPlayer != null)
+                    if (this.spriteBatch != null)
                     {
                         this.spriteBatch.Dispose();
                     }
@@ -160,7 +160,7 @@
                         if (source[x + rowOffset])
                         {
                             var rectanglePositionX = x * pixelSize;
-                            this.spriteBatch.Draw(this.pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), Color.White);
+                            this.spriteBatch.Draw(this.pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), this.foregroundColour);
                         }
                     }
                 }
