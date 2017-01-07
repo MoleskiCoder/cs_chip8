@@ -38,6 +38,14 @@
             this.graphics.IsFullScreen = false;
         }
 
+        public Chip8 Processor
+        {
+            get
+            {
+                return this.processor;
+            }
+        }
+
         private int PixelSize
         {
             get
@@ -65,6 +73,11 @@
                 //  VIP running at .78 kOps
                 return this.machineType == EmulationType.HP48 ? 22 : 13;
             }
+        }
+
+        public void Stop()
+        {
+            this.processor.Finished = true;
         }
 
         protected override void Dispose(bool disposing)

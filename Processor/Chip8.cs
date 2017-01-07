@@ -129,7 +129,7 @@
                 return this.finished;
             }
 
-            private set
+            set
             {
                 this.finished = value;
             }
