@@ -46,8 +46,10 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BreakpointHitEventArgs.cs" />
     <Compile Include="Chip8.cs" />
     <Compile Include="Controller.cs" />
+    <Compile Include="Debugger.cs" />
     <Compile Include="EmulationType.cs" />
     <Compile Include="IllegalInstructionException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

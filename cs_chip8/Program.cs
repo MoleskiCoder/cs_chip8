@@ -5,7 +5,7 @@
         public static void Main()
         {
             var machineType = Processor.EmulationType.HP48;
-            ////var machineType = Processor.EmulationType.VIP;
+            ////var machineType = Processor.EmulationType.ComsmacVip;
 
             ////var game = @"GAMES\PONG.ch8";
 
@@ -46,9 +46,9 @@
             ////var game = @"Chip-8 Pack\SuperChip Demos\Super Particle Demo [zeroZshadow, 2008].ch8";
             ////var game = @"Chip-8 Pack\SuperChip Demos\SCSerpinski [Sergey Naydenov, 2010].ch8";
 
-            using (var controller = new Processor.Controller(machineType, game))
+            using (var runner = new ConsoleRunner(machineType, game))
             {
-                controller.Run();
+                runner.Run();
             }
         }
     }

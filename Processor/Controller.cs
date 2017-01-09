@@ -46,14 +46,6 @@
             }
         }
 
-        private int PixelSize
-        {
-            get
-            {
-                return this.processor.HighResolution ? 5 : 10;
-            }
-        }
-
         // https://github.com/Chromatophore/HP48-Superchip#platform-speed
         // The HP48 calculator is much faster than the Cosmac VIP, but,
         // there is still no solid understanding of how much faster it is for
@@ -64,7 +56,7 @@
         // However graphical ops are significantly more costly than other ops on period
         // hardware versus Octo (where they are basically free) and as a result a raw
         // computational cycles/second speed assessment still has not been completed.
-        private int CyclesPerFrame
+        protected int CyclesPerFrame
         {
             get
             {
@@ -72,6 +64,14 @@
                 //  HP-48 running at 1.32 kOps
                 //  VIP running at .78 kOps
                 return this.machineType == EmulationType.HP48 ? 22 : 13;
+            }
+        }
+
+        private int PixelSize
+        {
+            get
+            {
+                return this.processor.HighResolution ? 5 : 10;
             }
         }
 
@@ -137,21 +137,7 @@
 
         protected override void Update(GameTime gameTime)
         {
-            for (int i = 0; i < this.CyclesPerFrame; ++i)
-            {
-                if (this.processor.Finished)
-                {
-                    this.Exit();
-                }
-
-                if (this.processor.LowResolution && this.processor.DrawNeeded)
-                {
-                    break;
-                }
-
-                this.processor.Step();
-            }
-
+            this.RunFrame();
             this.processor.UpdateTimers();
             this.CheckFullScreen();
             base.Update(gameTime);
@@ -173,6 +159,29 @@
             }
 
             base.Draw(gameTime);
+        }
+
+        protected virtual void RunFrame()
+        {
+            for (int i = 0; i < this.CyclesPerFrame; ++i)
+            {
+                if (this.RunCycle())
+                {
+                    break;
+                }
+
+                this.processor.Step();
+            }
+        }
+
+        protected virtual bool RunCycle()
+        {
+            if (this.processor.Finished)
+            {
+                this.Exit();
+            }
+
+            return this.processor.LowResolution && this.processor.DrawNeeded;
         }
 
         private void Draw()

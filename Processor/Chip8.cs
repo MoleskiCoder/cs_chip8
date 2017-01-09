@@ -1,6 +1,7 @@
 ﻿namespace Processor
 {
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -109,6 +110,14 @@
 
         private bool compatibility = false;
 
+        // Disassembly members...
+        private string mnemomicFormat;
+        private bool usedAddress;
+        private bool usedOperand;
+        private bool usedN;
+        private bool usedX;
+        private bool usedY;
+
         public Chip8(EmulationType emulating)
         {
             this.emulating = emulating;
@@ -121,6 +130,14 @@
         public event EventHandler<EventArgs> BeepStarting;
 
         public event EventHandler<EventArgs> BeepStopped;
+
+        public event EventHandler<EventArgs> EmulatingCycle;
+
+        public event EventHandler<EventArgs> EmulatedCycle;
+
+        public event EventHandler<EventArgs> BeginCycleDisassembly;
+
+        public event EventHandler<EventArgs> FinishCycleDisassembly;
 
         public bool Finished
         {
@@ -203,6 +220,69 @@
             private set
             {
                 this.soundPlaying = value;
+            }
+        }
+
+        public short PC
+        {
+            get
+            {
+                return this.pc;
+            }
+
+            set
+            {
+                this.pc = value;
+            }
+        }
+
+        public ushort SP
+        {
+            get
+            {
+                return this.sp;
+            }
+
+            set
+            {
+                this.sp = value;
+            }
+        }
+
+        public short I
+        {
+            get
+            {
+                return this.i;
+            }
+
+            set
+            {
+                this.i = value;
+            }
+        }
+
+        public byte[] Memory
+        {
+            get
+            {
+                return this.memory;
+            }
+        }
+
+        public byte[] V
+        {
+            get
+            {
+                return this.v;
+            }
+        }
+
+        public ushort[] Stack
+        {
+            get
+            {
+                return this.stack;
             }
         }
 
@@ -308,6 +388,81 @@
             }
         }
 
+        protected virtual void OnEmulatingCycle(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        {
+            var handler = this.EmulatingCycle;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+
+            this.OnBeginCycleDisassembly(programCounter, instruction, address, operand, n, x, y);
+        }
+
+        protected virtual void OnEmulatedCycle(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        {
+            this.OnFinishCycleDisassembly(programCounter, instruction, address, operand, n, x, y);
+
+            var handler = this.EmulatedCycle;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+        }
+
+        protected virtual void OnBeginCycleDisassembly(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        {
+            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode));
+
+            this.mnemomicFormat = "UNKNOWN";
+            this.usedAddress = this.usedOperand = this.usedN = this.usedX = this.usedY = false;
+
+            var handler = this.BeginCycleDisassembly;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+        }
+
+        protected virtual void OnFinishCycleDisassembly(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        {
+            var objects = new List<object>();
+
+            if (this.usedAddress)
+            {
+                objects.Add(address);
+            }
+
+            if (this.usedN)
+            {
+                objects.Add(n);
+            }
+
+            if (this.usedX)
+            {
+                objects.Add(x);
+            }
+
+            if (this.usedY)
+            {
+                objects.Add(y);
+            }
+
+            if (this.usedOperand)
+            {
+                objects.Add(operand);
+            }
+
+            var disassembly = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat, objects.ToArray());
+            System.Diagnostics.Debug.WriteLine(disassembly);
+
+            var handler = this.FinishCycleDisassembly;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+        }
+
         private void WaitForKeyPress()
         {
             var state = Keyboard.GetState();
@@ -338,7 +493,8 @@
                 throw new InvalidOperationException("Instruction is not on an aligned address");
             }
 
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode));
+            var programCounter = this.pc;
+            this.OnEmulatingCycle(programCounter, this.opcode, nnn, nn, n, x, y);
 
             this.pc += 2;
 
@@ -594,7 +750,7 @@
                     throw new IllegalInstructionException(this.opcode);
             }
 
-            System.Diagnostics.Debug.WriteLine(string.Empty);
+            this.OnEmulatedCycle(programCounter, this.opcode, nnn, nn, n, x, y);
         }
 
         ////
@@ -606,9 +762,10 @@
         // Code generated: 0x00Cn
         private void SCDOWN(int n)
         {
-            this.VerifyRunningHp48();
+            this.usedN = true;
+            this.mnemomicFormat = "SCDOWN\t{0:X1}";
 
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SCDOWN\t{0:X1}", n));
+            this.VerifyRunningHp48();
 
             var screenHeight = this.ScreenHeight;
 
@@ -634,7 +791,7 @@
         // Code generated: 0x00FA
         private void COMPATIBILITY()
         {
-            System.Diagnostics.Debug.Write("COMPATIBILITY");
+            this.mnemomicFormat = "COMPATIBILITY";
             this.compatibility = true;
         }
 
@@ -645,9 +802,9 @@
         // Code generated: 0x00FB
         private void SCRIGHT()
         {
-            this.VerifyRunningHp48();
+            this.mnemomicFormat = "SCRIGHT";
 
-            System.Diagnostics.Debug.Write("SCRIGHT");
+            this.VerifyRunningHp48();
 
             var screenWidth = this.ScreenWidth;
 
@@ -676,9 +833,9 @@
         // Code generated: 0x00FC
         private void SCLEFT()
         {
-            this.VerifyRunningHp48();
+            this.mnemomicFormat = "SCLEFT";
 
-            System.Diagnostics.Debug.Write("SCLEFT");
+            this.VerifyRunningHp48();
 
             var screenWidth = this.ScreenWidth;
 
@@ -705,9 +862,8 @@
         // Code generated: 0x00FE
         private void LOW()
         {
+            this.mnemomicFormat = "LOW";
             this.VerifyRunningHp48();
-
-            System.Diagnostics.Debug.Write("LOW");
             this.OnLowResolution();
         }
 
@@ -716,9 +872,8 @@
         // Code generated: 0x00FF
         private void HIGH()
         {
+            this.mnemomicFormat = "HIGH";
             this.VerifyRunningHp48();
-
-            System.Diagnostics.Debug.Write("HIGH");
             this.OnHighResolution();
         }
 
@@ -728,9 +883,10 @@
         // Code generated: 0xFX75
         private void LD_R_Vx(int x)
         {
-            this.VerifyRunningHp48();
+            this.mnemomicFormat = "LD\tR,V{0:X1}";
+            this.usedX = true;
 
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tR,V{0:X1}", x));
+            this.VerifyRunningHp48();
             Array.Copy(this.v, this.r, x + 1);
         }
 
@@ -740,9 +896,10 @@
         // Code generated: 0xFX85
         private void LD_Vx_R(int x)
         {
-            this.VerifyRunningHp48();
+            this.mnemomicFormat = "LD\tV{0:X1},R";
+            this.usedX = true;
 
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},R", x));
+            this.VerifyRunningHp48();
             Array.Copy(this.r, this.v, x + 1);
         }
 
@@ -752,9 +909,8 @@
         // Code generated: 0x00FD.
         private void EXIT()
         {
+            this.mnemomicFormat = "EXIT";
             this.VerifyRunningHp48();
-
-            System.Diagnostics.Debug.Write("EXIT");
             this.Finished = true;
         }
 
@@ -762,33 +918,37 @@
 
         private void CLS()
         {
-            System.Diagnostics.Debug.Write("CLS");
+            this.mnemomicFormat = "CLS";
             this.ClearGraphics();
             this.DrawNeeded = true;
         }
 
         private void RET()
         {
-            System.Diagnostics.Debug.Write("RET");
+            this.mnemomicFormat = "RET";
             this.pc = (short)this.stack[--this.sp & 0xF];
         }
 
         private void JP(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "JP\t{0:X3}", nnn));
+            this.mnemomicFormat = "JP\t{0:X3}";
+            this.usedAddress = true;
             this.pc = nnn;
         }
 
         private void CALL(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "CALL\t{0:X3}", nnn));
+            this.mnemomicFormat = "CALL\t{0:X3}";
+            this.usedAddress = true;
             this.stack[this.sp++] = (ushort)this.pc;
             this.pc = nnn;
         }
 
         private void SE(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SE\tV{0:X1},#{1:X2}", x, nn));
+            this.mnemomicFormat = "SE\tV{0:X1},#{1:X2}";
+            this.usedOperand = this.usedX = true;
+
             if (this.v[x] == nn)
             {
                 this.pc += 2;
@@ -797,7 +957,9 @@
 
         private void SNE(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SNE\tV{0:X1},#{1:X2}", x, nn));
+            this.mnemomicFormat = "SNE\tV{0:X1},#{1:X2}";
+            this.usedOperand = this.usedX = true;
+
             if (this.v[x] != nn)
             {
                 this.pc += 2;
@@ -806,7 +968,9 @@
 
         private void SE(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SE\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "SE\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
+
             if (this.v[x] == this.v[y])
             {
                 this.pc += 2;
@@ -815,67 +979,83 @@
 
         private void LD(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},#{1:X2}", x, nn));
+            this.mnemomicFormat = "LD\tV{0:X1},#{1:X2}";
+            this.usedX = this.usedOperand = true;
+
             this.v[x] = nn;
         }
 
         private void ADD(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "ADD\tV{0:X1},#{1:X2}", x, nn));
+            this.mnemomicFormat = "ADD\tV{0:X1},#{1:X2}";
+            this.usedX = this.usedOperand = true;
+
             this.v[x] += nn;
         }
 
         private void LD(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "LD\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
+
             this.v[x] = this.v[y];
         }
 
         private void OR(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "OR\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "OR\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
+
             this.v[x] |= this.v[y];
         }
 
         private void AND(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "AND\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "AND\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
             this.v[x] &= this.v[y];
         }
 
         private void XOR(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "XOR\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "XOR\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
             this.v[x] ^= this.v[y];
         }
 
         private void ADD(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "ADD\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "ADD\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
             this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
             this.v[x] += this.v[y];
         }
 
         private void SUB(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SUB\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "SUB\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
             this.v[0xf] = (byte)(this.v[x] >= this.v[y] ? 1 : 0);
             this.v[x] -= this.v[y];
         }
 
         private void SHR(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SHR\tV{0:X1}", x));
-
             // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
             // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
             if (this.emulating == EmulationType.ComsmacVip)
             {
+                this.mnemomicFormat = "SHR\tV{0:X1},V{0:X1}";
+                this.usedX = this.usedY = true;
+
                 this.v[y] >>= 1;
                 this.v[x] = this.v[y];
             }
             else
             {
+                this.mnemomicFormat = "SHR\tV{0:X1}";
+                this.usedX = true;
+
                 this.v[x] >>= 1;
             }
 
@@ -884,33 +1064,41 @@
 
         private void SUBN(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SUBN\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "SUBN\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
+
             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 0 : 1);
             this.v[x] = (byte)(this.v[y] - this.v[x]);
         }
 
         private void SHL(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SHL\tV{0:X1}", x));
-
             this.v[0xf] = (byte)((this.v[x] & 0x80) == 0 ? 0 : 1);
 
             // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
             // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
             if (this.emulating == EmulationType.ComsmacVip)
             {
+                this.mnemomicFormat = "SHL\tV{0:X1},V{1:X1}";
+                this.usedX = this.usedY = true;
+
                 this.v[y] <<= 1;
                 this.v[x] = this.v[y];
             }
             else
             {
+                this.mnemomicFormat = "SHL\tV{0:X1}";
+                this.usedX = true;
+
                 this.v[x] <<= 1;
             }
         }
 
         private void SNE(int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SNE\tV{0:X1},V{1:X1}", x, y));
+            this.mnemomicFormat = "SNE\tV{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
+
             if (this.v[x] != this.v[y])
             {
                 this.pc += 2;
@@ -919,13 +1107,16 @@
 
         private void LD_I(short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tI,#{0:X3}", nnn));
+            this.mnemomicFormat = "LD\tI,#{0:X3}";
+            this.usedAddress = true;
+
             this.i = nnn;
         }
 
         private void JP_V0(int x, short nnn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "JP\t[V0],#{0:X3}", nnn));
+            this.mnemomicFormat = "JP\t[V0],#{0:X3}";
+            this.usedAddress = true;
 
             // https://github.com/Chromatophore/HP48-Superchip#bnnn
             // Sets PC to address NNN + v0 -
@@ -938,27 +1129,31 @@
 
         private void RND(int x, byte nn)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "RND\tV{0:X1},#{1:X2}", x, nn));
+            this.mnemomicFormat = "RND\tV{0:X1},#{1:X2}";
+            this.usedOperand = this.usedX = true;
             this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
         }
 
         private void XDRW(int x, int y)
         {
+            this.mnemomicFormat = "XDRW V{0:X1},V{1:X1}";
+            this.usedX = this.usedY = true;
             this.VerifyRunningHp48();
-
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "XDRW V{0:X1},V{1:X1}", x, y));
             this.Draw(x, y, 16, 16);
         }
 
         private void DRW(int x, int y, int n)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "DRW\tV{0:X1},V{1:X1},#{2:X1}", x, y, n));
+            this.mnemomicFormat = "DRW\tV{0:X1},V{1:X1},#{2:X1}";
+            this.usedX = this.usedY = this.usedN = true;
             this.Draw(x, y, 8, n);
         }
 
         private void SKP(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SKP\tV{0:X1}", x));
+            this.mnemomicFormat = "SKP\tV{0:X1}";
+            this.usedX = true;
+
             if (Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
             {
                 this.pc += 2;
@@ -967,7 +1162,9 @@
 
         private void SKNP(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "SKNP\tV{0:X1}", x));
+            this.mnemomicFormat = "SKNP\tV{0:X1}";
+            this.usedX = true;
+
             if (!Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
             {
                 this.pc += 2;
@@ -976,7 +1173,9 @@
 
         private void LD_Vx_II(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},[I]", x));
+            this.mnemomicFormat = "LD\tV{0:X1},[I]";
+            this.usedX = true;
+
             Array.Copy(this.memory, this.i, this.v, 0, x + 1);
 
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
@@ -989,7 +1188,9 @@
 
         private void LD_II_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\t[I],V{0:X1}", x));
+            this.mnemomicFormat = "LD\t[I],V{0:X1}";
+            this.usedX = true;
+
             Array.Copy(this.v, 0, this.memory, this.i, x + 1);
 
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
@@ -1002,7 +1203,9 @@
 
         private void LD_B_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tB,V{0:X1}", x));
+            this.mnemomicFormat = "LD\tB,V{0:X1}";
+            this.usedX = true;
+
             var content = this.v[x];
             this.memory[this.i] = (byte)(content / 100);
             this.memory[this.i + 1] = (byte)((content / 10) % 10);
@@ -1011,19 +1214,22 @@
 
         private void LD_F_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tF,V{0:X1}", x));
+            this.mnemomicFormat = "LD\tF,V{0:X1}";
+            this.usedX = true;
             this.i = (short)(StandardFontOffset + (5 * this.v[x]));
         }
 
         private void LD_HF_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tHF,V{0:X1}", x));
+            this.mnemomicFormat = "LD\tHF,V{0:X1}";
+            this.usedX = true;
             this.i = (short)(HighFontOffset + (10 * this.v[x]));
         }
 
         private void ADD_I_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "ADD\tI,V{0:X1}", x));
+            this.mnemomicFormat = "ADD\tI,V{0:X1}";
+            this.usedX = true;
 
             // From wikipedia entry on CHIP-8:
             // VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0
@@ -1036,26 +1242,30 @@
 
         private void LD_ST_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tST,V{0:X1}", x));
+            this.mnemomicFormat = "LD\tST,V{0:X1}";
+            this.usedX = true;
             this.soundTimer = this.v[x];
         }
 
         private void LD_DT_Vx(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tDT,V{0:X1}", x));
+            this.mnemomicFormat = "LD\tDT,V{0:X1}";
+            this.usedX = true;
             this.delayTimer = this.v[x];
         }
 
         private void LD_Vx_K(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},K", x));
+            this.mnemomicFormat = "LD\tV{0:X1},K";
+            this.usedX = true;
             this.waitingForKeyPress = true;
             this.waitingForKeyPressRegister = x;
         }
 
         private void LD_Vx_DT(int x)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "LD\tV{0:X1},DT", x));
+            this.mnemomicFormat = "LD\tV{0:X1},DT";
+            this.usedX = true;
             this.v[x] = this.delayTimer;
         }
 
