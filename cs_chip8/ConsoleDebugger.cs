@@ -12,6 +12,9 @@
         private readonly ManualResetEvent debuggerAvailable;
         private readonly ManualResetEvent stepping;
 
+        private bool trace = true;
+        private bool tracing = false;
+
         private bool finished = false;
 
         private bool disposed = false;
@@ -39,6 +42,8 @@
 
             while (!this.finished)
             {
+                this.VerifyDisassemblyEventHandlers();
+
                 Console.Write("debug: ");
                 var input = Console.ReadLine();
                 switch (input)
@@ -50,6 +55,10 @@
 
                     case "step":
                         this.debugger.Step();
+                        break;
+
+                    case "trace":
+                        this.trace = !this.trace;
                         break;
 
                     default:
@@ -108,6 +117,45 @@
             e.Cancel = true;
             this.debugger.Break();
             this.stepping.Set();
+        }
+
+        private void VerifyDisassemblyEventHandlers()
+        {
+            if (this.trace && !this.tracing)
+            {
+                this.AddDisassemblyEventHandlers();
+            }
+
+            if (!this.trace && this.tracing)
+            {
+                this.RemoveDisassemblyEventHandlers();
+            }
+        }
+
+        private void AddDisassemblyEventHandlers()
+        {
+            Console.WriteLine("Trace on");
+            this.debugger.Processor.BeginCycleDisassembly += this.Processor_BeginCycleDisassembly;
+            this.debugger.Processor.FinishCycleDisassembly += this.Processor_FinishCycleDisassembly;
+            this.tracing = true;
+        }
+
+        private void RemoveDisassemblyEventHandlers()
+        {
+            Console.WriteLine("Trace off");
+            this.debugger.Processor.BeginCycleDisassembly -= this.Processor_BeginCycleDisassembly;
+            this.debugger.Processor.FinishCycleDisassembly -= this.Processor_FinishCycleDisassembly;
+            this.tracing = false;
+        }
+
+        private void Processor_BeginCycleDisassembly(object sender, DisassemblyEventArgs e)
+        {
+            Console.Write(e.Output);
+        }
+
+        private void Processor_FinishCycleDisassembly(object sender, DisassemblyEventArgs e)
+        {
+            Console.Write(e.Output);
         }
     }
 }

@@ -135,9 +135,9 @@
 
         public event EventHandler<EventArgs> EmulatedCycle;
 
-        public event EventHandler<EventArgs> BeginCycleDisassembly;
+        public event EventHandler<DisassemblyEventArgs> BeginCycleDisassembly;
 
-        public event EventHandler<EventArgs> FinishCycleDisassembly;
+        public event EventHandler<DisassemblyEventArgs> FinishCycleDisassembly;
 
         public bool Finished
         {
@@ -412,54 +412,52 @@
 
         protected virtual void OnBeginCycleDisassembly(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
         {
-            System.Diagnostics.Debug.Write(string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode));
-
             this.mnemomicFormat = "UNKNOWN";
             this.usedAddress = this.usedOperand = this.usedN = this.usedX = this.usedY = false;
 
             var handler = this.BeginCycleDisassembly;
             if (handler != null)
             {
-                handler(this, EventArgs.Empty);
+                var output = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode);
+                handler(this, new DisassemblyEventArgs(output));
             }
         }
 
         protected virtual void OnFinishCycleDisassembly(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
         {
-            var objects = new List<object>();
-
-            if (this.usedAddress)
-            {
-                objects.Add(address);
-            }
-
-            if (this.usedN)
-            {
-                objects.Add(n);
-            }
-
-            if (this.usedX)
-            {
-                objects.Add(x);
-            }
-
-            if (this.usedY)
-            {
-                objects.Add(y);
-            }
-
-            if (this.usedOperand)
-            {
-                objects.Add(operand);
-            }
-
-            var disassembly = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat, objects.ToArray());
-            System.Diagnostics.Debug.WriteLine(disassembly);
-
             var handler = this.FinishCycleDisassembly;
             if (handler != null)
             {
-                handler(this, EventArgs.Empty);
+                var objects = new List<object>();
+
+                if (this.usedAddress)
+                {
+                    objects.Add(address);
+                }
+
+                if (this.usedN)
+                {
+                    objects.Add(n);
+                }
+
+                if (this.usedX)
+                {
+                    objects.Add(x);
+                }
+
+                if (this.usedY)
+                {
+                    objects.Add(y);
+                }
+
+                if (this.usedOperand)
+                {
+                    objects.Add(operand);
+                }
+
+                var output = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat + "\n", objects.ToArray());
+
+                handler(this, new DisassemblyEventArgs(output));
             }
         }
 
