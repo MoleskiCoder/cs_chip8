@@ -71,7 +71,7 @@
         {
             get
             {
-                return this.processor.HighResolution ? 5 : 10;
+                return this.processor.Display.HighResolution ? 5 : 10;
             }
         }
 
@@ -121,7 +121,7 @@
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
             this.pixel.SetData<Color>(new Color[] { this.foregroundColour });
 
-            this.processor = new Chip8(this.machineType, new MonoGameKeyboard());
+            this.processor = new Chip8(this.machineType, new MonoGameKeyboard(), new BitmappedGraphics());
 
             this.SetLowResolution();
 
@@ -181,16 +181,16 @@
                 this.Exit();
             }
 
-            return this.processor.LowResolution && this.processor.DrawNeeded;
+            return this.processor.Display.LowResolution && this.processor.DrawNeeded;
         }
 
         private void Draw()
         {
             var pixelSize = this.PixelSize;
-            var screenWidth = this.processor.ScreenWidth;
-            var screenHeight = this.processor.ScreenHeight;
+            var screenWidth = this.processor.Display.Width;
+            var screenHeight = this.processor.Display.Height;
 
-            var source = this.processor.Graphics;
+            var source = this.processor.Display.Graphics;
 
             this.spriteBatch.Begin();
             try
@@ -255,12 +255,12 @@
 
         private void SetLowResolution()
         {
-            this.ChangeResolution(Chip8.ScreenWidthLow, Chip8.ScreenHeightLow);
+            this.ChangeResolution(BitmappedGraphics.ScreenWidthLow, BitmappedGraphics.ScreenHeightLow);
         }
 
         private void SetHighResolution()
         {
-            this.ChangeResolution(Chip8.ScreenWidthHigh, Chip8.ScreenHeightHigh);
+            this.ChangeResolution(BitmappedGraphics.ScreenWidthHigh, BitmappedGraphics.ScreenHeightHigh);
         }
     }
 }

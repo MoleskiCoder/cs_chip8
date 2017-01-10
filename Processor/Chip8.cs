@@ -4,17 +4,10 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
-    using System.Linq;
     using System.Text;
 
     public class Chip8
     {
-        public const int ScreenWidthLow = 64;
-        public const int ScreenHeightLow = 32;
-
-        public const int ScreenWidthHigh = 128;
-        public const int ScreenHeightHigh = 64;
-
         private const int StandardFontOffset = 0x1b0;
         private const int HighFontOffset = 0x110;
 
@@ -69,7 +62,6 @@
 
         private short i;
         private short pc;
-        private bool[] graphics;
         private byte delayTimer;
         private byte soundTimer;
         private ushort sp;
@@ -83,7 +75,6 @@
         private bool waitingForKeyPress;
         private int waitingForKeyPressRegister;
 
-        private bool highResolution = false;
         private bool finished = false;
 
         private bool compatibility = false;
@@ -97,11 +88,13 @@
         private bool usedY;
 
         private IKeyboardDevice keyboard;
+        private IGraphicsDevice display;
 
-        public Chip8(EmulationType emulating, IKeyboardDevice keyboard)
+        public Chip8(EmulationType emulating, IKeyboardDevice keyboard, IGraphicsDevice display)
         {
             this.emulating = emulating;
             this.keyboard = keyboard;
+            this.display = display;
         }
 
         public event EventHandler<EventArgs> HighResolutionConfigured;
@@ -143,51 +136,6 @@
             set
             {
                 this.drawNeeded = value;
-            }
-        }
-
-        public bool[] Graphics
-        {
-            get
-            {
-                return this.graphics;
-            }
-        }
-
-        public bool HighResolution
-        {
-            get
-            {
-                return this.highResolution;
-            }
-
-            private set
-            {
-                this.highResolution = value;
-            }
-        }
-
-        public bool LowResolution
-        {
-            get
-            {
-                return !this.HighResolution;
-            }
-        }
-
-        public int ScreenWidth
-        {
-            get
-            {
-                return this.HighResolution ? ScreenWidthHigh : ScreenWidthLow;
-            }
-        }
-
-        public int ScreenHeight
-        {
-            get
-            {
-                return this.HighResolution ? ScreenHeightHigh : ScreenHeightLow;
             }
         }
 
@@ -267,20 +215,26 @@
             }
         }
 
+        public IGraphicsDevice Display
+        {
+            get
+            {
+                return this.display;
+            }
+        }
+
         public void Initialise()
         {
             this.Finished = false;
             this.DrawNeeded = false;
-            this.HighResolution = false;
+            this.display.HighResolution = false;
 
             this.pc = 0x200;     // Program counter starts at 0x200
             this.i = 0;          // Reset index register
             this.sp = 0;         // Reset stack pointer
 
-            this.AllocateGraphicsMemory();
-
-            // Clear display
-            this.ClearGraphics();
+            this.display.AllocateMemory();
+            this.display.Clear();
 
             // Clear stack
             Array.Clear(this.stack, 0, 16);
@@ -325,8 +279,8 @@
 
         protected void OnHighResolution()
         {
-            this.HighResolution = true;
-            this.AllocateGraphicsMemory();
+            this.display.HighResolution = true;
+            this.display.AllocateMemory();
 
             var handler = this.HighResolutionConfigured;
             if (handler != null)
@@ -337,8 +291,8 @@
 
         protected void OnLowResolution()
         {
-            this.HighResolution = false;
-            this.AllocateGraphicsMemory();
+            this.display.HighResolution = false;
+            this.display.AllocateMemory();
 
             var handler = this.LowResolutionConfigured;
             if (handler != null)
@@ -742,18 +696,18 @@
 
             this.VerifyRunningHp48();
 
-            var screenHeight = this.ScreenHeight;
+            var screenHeight = this.display.Height;
 
             // Copy rows bottom to top
             for (int y = screenHeight - n - 1; y >= 0; --y)
             {
-                this.CopyGraphicsRow(y + n, y);
+                this.display.CopyRow(y + n, y);
             }
 
             // Remove the top columns, blanked by the scroll effect
             for (int y = 0; y < n; ++y)
             {
-                this.ClearGraphicsRow(y);
+                this.display.ClearRow(y);
             }
 
             this.DrawNeeded = true;
@@ -781,7 +735,7 @@
 
             this.VerifyRunningHp48();
 
-            var screenWidth = this.ScreenWidth;
+            var screenWidth = this.display.Width;
 
             // Scroll distance
             var n = 4;
@@ -789,13 +743,13 @@
             // Copy colummns from right to left
             for (int x = screenWidth - n - 1; x >= 0; --x)
             {
-                this.CopyGraphicsColumn(x + n, x);
+                this.display.CopyColumn(x + n, x);
             }
 
             // Remove the leftmost columns, blanked by the scroll effect
             for (int x = 0; x < n; ++x)
             {
-                this.ClearGraphicsColumn(x);
+                this.display.ClearColumn(x);
             }
 
             this.DrawNeeded = true;
@@ -812,7 +766,7 @@
 
             this.VerifyRunningHp48();
 
-            var screenWidth = this.ScreenWidth;
+            var screenWidth = this.display.Width;
 
             // Scroll distance
             var n = 4;
@@ -820,13 +774,13 @@
             // Copy columns from left to right
             for (int x = 0; x < screenWidth - n - 1; ++x)
             {
-                this.CopyGraphicsColumn(x, x + n);
+                this.display.CopyColumn(x, x + n);
             }
 
             // Remove the rightmost columns, blanked by the scroll effect
             for (int x = screenWidth - n - 1; x < screenWidth; ++x)
             {
-                this.ClearGraphicsColumn(x);
+                this.display.ClearColumn(x);
             }
 
             this.DrawNeeded = true;
@@ -894,7 +848,7 @@
         private void CLS()
         {
             this.mnemomicFormat = "CLS";
-            this.ClearGraphics();
+            this.display.Clear();
             this.DrawNeeded = true;
         }
 
@@ -1298,117 +1252,11 @@
             }
         }
 
-        private void AllocateGraphicsMemory()
-        {
-            var previous = this.graphics;
-            this.graphics = new bool[this.ScreenWidth * this.ScreenHeight];
-
-            // https://github.com/Chromatophore/HP48-Superchip#swapping-display-modes
-            // Superchip has two different display modes, 64x32 and 128x64. When swapped between,
-            // the display buffer is not cleared. Pixels are modified based on being XORed in 1x2 vertical
-            // columns, so odd patterns can be created.
-            if (previous != null)
-            {
-                Array.Copy(previous, 0, this.graphics, 0, Math.Min(previous.Length, this.graphics.Length));
-            }
-        }
-
         private void Draw(int x, int y, int width, int height)
         {
-            var screenWidth = this.ScreenWidth;
-            var screenHeight = this.ScreenHeight;
-
-            var bytesPerRow = width / 8;
-
-            var drawX = this.v[x] & (screenWidth - 1);
-            var drawY = this.v[y] & (screenHeight - 1);
-
-            //// https://github.com/Chromatophore/HP48-Superchip#collision-enumeration
-            //// An interesting and apparently often unnoticed change to the Super Chip spec is the
-            //// following: All drawing is done in XOR mode. If this causes one or more pixels to be
-            //// erased, VF is <> 00, other-wise 00. In extended screen mode (aka hires), SCHIP 1.1
-            //// will report the number of rows that include a pixel that XORs with the existing data,
-            //// so the 'correct' way to detect collisions is Vf <> 0 rather than Vf == 1.
-            var rowHits = new int[height];
-
-            for (var row = 0; row < height; ++row)
-            {
-                var cellY = drawY + row;
-                var cellRowOffset = cellY * screenWidth;
-                var pixelAddress = this.i + (row * bytesPerRow);
-                for (var column = 0; column < width; ++column)
-                {
-                    var high = column > 7;
-                    var pixelMemory = this.memory[pixelAddress + (high ? 1 : 0)];
-                    var pixel = (pixelMemory & (0x80 >> (column & 0x7))) != 0;
-                    if (pixel)
-                    {
-                        var cellX = drawX + column;
-                        if ((cellX < screenWidth) && (cellY < screenHeight))
-                        {
-                            var cell = cellX + cellRowOffset;
-                            if (this.graphics[cell])
-                            {
-                                rowHits[row]++;
-                            }
-
-                            this.graphics[cell] ^= true;
-                        }
-                        else
-                        {
-                            //// https://github.com/Chromatophore/HP48-Superchip#collision-with-the-bottom-of-the-screen
-                            //// Sprites that are drawn such that they contain data that runs off of the bottom of the
-                            //// screen will set Vf based on the number of lines that run off of the screen,
-                            //// as if they are colliding.
-                            if (cellY >= screenHeight)
-                            {
-                                rowHits[row]++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            this.v[0xf] = (byte)(from rowHit in rowHits where rowHit > 0 select rowHit).Count();
-
+            var hits = this.display.Draw(this.memory, this.i, this.v[x], this.v[y], width, height);
+            this.v[0xf] = (byte)hits;
             this.drawNeeded = true;
-        }
-
-        private void ClearGraphicsRow(int row)
-        {
-            var width = this.ScreenWidth;
-            Array.Clear(this.graphics, row * width, width);
-        }
-
-        private void ClearGraphicsColumn(int column)
-        {
-            var width = this.ScreenWidth;
-            var height = this.ScreenHeight;
-            for (int y = 0; y < height; ++y)
-            {
-                this.graphics[column + (y * width)] = false;
-            }
-        }
-
-        private void CopyGraphicsRow(int from, int to)
-        {
-            var width = this.ScreenWidth;
-            Array.Copy(this.graphics, to * width, this.graphics, from * width, width);
-        }
-
-        private void CopyGraphicsColumn(int from, int to)
-        {
-            var width = this.ScreenWidth;
-            var height = this.ScreenHeight;
-            for (int y = 0; y < height; ++y)
-            {
-                this.graphics[from + (y * width)] = this.graphics[to + (y * width)];
-            }
-        }
-
-        private void ClearGraphics()
-        {
-            Array.Clear(this.graphics, 0, this.ScreenWidth * this.ScreenHeight);
         }
 
         private void VerifyRunningHp48()

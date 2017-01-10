@@ -9,7 +9,7 @@
         //  4   5   6   D
         //  7   8   9   E
         //  A   0   B   F
-        private readonly Keys[] key = new Keys[]
+        private readonly Keys[] mapping = new Keys[]
         {
                         Keys.X,
                 
@@ -29,9 +29,9 @@
         {
             key = -1;
             var state = Keyboard.GetState();
-            for (int idx = 0; idx < this.key.Length; idx++)
+            for (int idx = 0; idx < this.mapping.Length; idx++)
             {
-                if (state.IsKeyDown(this.key[idx]))
+                if (state.IsKeyDown(this.mapping[idx]))
                 {
                     key = idx;
                     return true;
@@ -43,7 +43,7 @@
 
         public bool IsKeyPressed(int key)
         {
-            return Keyboard.GetState().IsKeyDown(this.key[key]);
+            return Keyboard.GetState().IsKeyDown(this.mapping[key]);
         }
     }
 }
