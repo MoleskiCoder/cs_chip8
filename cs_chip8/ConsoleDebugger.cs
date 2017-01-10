@@ -81,6 +81,11 @@
             {
                 if (disposing)
                 {
+                    if (this.stepping != null)
+                    {
+                        this.stepping.Dispose();
+                    }
+
                     if (this.debuggerAvailable != null)
                     {
                         this.debuggerAvailable.Dispose();
