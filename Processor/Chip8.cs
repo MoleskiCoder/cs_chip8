@@ -1315,26 +1315,20 @@
 
         private void Draw(int x, int y, int width, int height)
         {
+            var screenWidth = this.ScreenWidth;
+            var screenHeight = this.ScreenHeight;
+
+            var bytesPerRow = width / 8;
+
+            var drawX = this.v[x] & (screenWidth - 1);
+            var drawY = this.v[y] & (screenHeight - 1);
+
             //// https://github.com/Chromatophore/HP48-Superchip#collision-enumeration
             //// An interesting and apparently often unnoticed change to the Super Chip spec is the
             //// following: All drawing is done in XOR mode. If this causes one or more pixels to be
             //// erased, VF is <> 00, other-wise 00. In extended screen mode (aka hires), SCHIP 1.1
             //// will report the number of rows that include a pixel that XORs with the existing data,
             //// so the 'correct' way to detect collisions is Vf <> 0 rather than Vf == 1.
-
-            //// https://github.com/Chromatophore/HP48-Superchip#collision-with-the-bottom-of-the-screen
-            //// Sprites that are drawn such that they contain data that runs off of the bottom of the
-            //// screen will set Vf based on the number of lines that run off of the screen,
-            //// as if they are colliding.
-
-            var screenWidth = this.ScreenWidth;
-            var screenHeight = this.ScreenHeight;
-
-            var bytesPerRow = width / 8;
-
-            var drawX = this.v[x];
-            var drawY = this.v[y];
-
             var rowHits = new int[height];
 
             for (var row = 0; row < height; ++row)
@@ -1359,6 +1353,17 @@
                             }
 
                             this.graphics[cell] ^= true;
+                        }
+                        else
+                        {
+                            //// https://github.com/Chromatophore/HP48-Superchip#collision-with-the-bottom-of-the-screen
+                            //// Sprites that are drawn such that they contain data that runs off of the bottom of the
+                            //// screen will set Vf based on the number of lines that run off of the screen,
+                            //// as if they are colliding.
+                            if (cellY >= screenHeight)
+                            {
+                                rowHits[row]++;
+                            }
                         }
                     }
                 }
