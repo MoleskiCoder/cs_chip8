@@ -6,7 +6,6 @@
     using System.IO;
     using System.Linq;
     using System.Text;
-    using Microsoft.Xna.Framework.Input;
 
     public class Chip8
     {
@@ -59,27 +58,6 @@
             0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0x80, 0x00, // F
         };
 
-        // CHIP-8 Keyboard layout
-        //  1   2   3   C
-        //  4   5   6   D
-        //  7   8   9   E
-        //  A   0   B   F
-        private readonly Keys[] key = new Keys[]
-        {
-                        Keys.X,
-                
-            Keys.D1,    Keys.D2,    Keys.D3,
-            Keys.Q,     Keys.W,     Keys.E,
-            Keys.A,     Keys.S,     Keys.D,
-
-            Keys.Z,                 Keys.C,
-
-                                                Keys.D4,
-                                                Keys.R,
-                                                Keys.F,
-                                                Keys.V
-        };
-
         private readonly EmulationType emulating;
 
         private readonly Random randomNumbers = new Random();
@@ -118,9 +96,12 @@
         private bool usedX;
         private bool usedY;
 
-        public Chip8(EmulationType emulating)
+        private IKeyboardDevice keyboard;
+
+        public Chip8(EmulationType emulating, IKeyboardDevice keyboard)
         {
             this.emulating = emulating;
+            this.keyboard = keyboard;
         }
 
         public event EventHandler<EventArgs> HighResolutionConfigured;
@@ -463,15 +444,11 @@
 
         private void WaitForKeyPress()
         {
-            var state = Keyboard.GetState();
-            for (int idx = 0; idx < this.key.Length; idx++)
+            int key;
+            if (this.keyboard.CheckKeyPress(out key))
             {
-                if (state.IsKeyDown(this.key[idx]))
-                {
-                    this.waitingForKeyPress = false;
-                    this.v[this.waitingForKeyPressRegister] = (byte)idx;
-                    break;
-                }
+                this.waitingForKeyPress = false;
+                this.v[this.waitingForKeyPressRegister] = (byte)key;
             }
         }
 
@@ -1152,7 +1129,7 @@
             this.mnemomicFormat = "SKP\tV{0:X1}";
             this.usedX = true;
 
-            if (Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
+            if (this.keyboard.IsKeyPressed(this.v[x]))
             {
                 this.pc += 2;
             }
@@ -1163,7 +1140,7 @@
             this.mnemomicFormat = "SKNP\tV{0:X1}";
             this.usedX = true;
 
-            if (!Keyboard.GetState().IsKeyDown(this.key[this.v[x]]))
+            if (!this.keyboard.IsKeyPressed(this.v[x]))
             {
                 this.pc += 2;
             }

@@ -121,7 +121,7 @@
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
             this.pixel.SetData<Color>(new Color[] { this.foregroundColour });
 
-            this.processor = new Chip8(this.machineType);
+            this.processor = new Chip8(this.machineType, new MonoGameKeyboard());
 
             this.SetLowResolution();
 
