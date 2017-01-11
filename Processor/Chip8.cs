@@ -373,7 +373,7 @@
                     objects.Add(operand);
                 }
 
-                var pre = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode);
+                var pre = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", programCounter, instruction);
                 var post = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat, objects.ToArray());
 
                 handler(this, new DisassemblyEventArgs(pre + post));
