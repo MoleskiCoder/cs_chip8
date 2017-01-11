@@ -155,7 +155,7 @@
         public void CopyRow(int source, int destination)
         {
             var width = this.Width;
-            Array.Copy(this.graphics, destination * width, this.graphics, source * width, width);
+            Array.Copy(this.graphics, source * width, this.graphics, destination * width, width);
         }
 
         public void CopyColumn(int source, int destination)
@@ -164,7 +164,7 @@
             var height = this.Height;
             for (int y = 0; y < height; ++y)
             {
-                this.graphics[source + (y * width)] = this.graphics[destination + (y * width)];
+                this.graphics[destination + (y * width)] = this.graphics[source + (y * width)];
             }
         }
 

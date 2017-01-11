@@ -140,27 +140,20 @@
         private void AddDisassemblyEventHandlers()
         {
             Console.WriteLine("Trace on");
-            this.debugger.Processor.BeginCycleDisassembly += this.Processor_BeginCycleDisassembly;
-            this.debugger.Processor.FinishCycleDisassembly += this.Processor_FinishCycleDisassembly;
+            this.debugger.Processor.DisassembleInstruction += this.Processor_DisassembleInstruction;
             this.tracing = true;
         }
 
         private void RemoveDisassemblyEventHandlers()
         {
             Console.WriteLine("Trace off");
-            this.debugger.Processor.BeginCycleDisassembly -= this.Processor_BeginCycleDisassembly;
-            this.debugger.Processor.FinishCycleDisassembly -= this.Processor_FinishCycleDisassembly;
+            this.debugger.Processor.DisassembleInstruction -= this.Processor_DisassembleInstruction;
             this.tracing = false;
         }
 
-        private void Processor_BeginCycleDisassembly(object sender, DisassemblyEventArgs e)
+        private void Processor_DisassembleInstruction(object sender, DisassemblyEventArgs e)
         {
-            Console.Write(e.Output);
-        }
-
-        private void Processor_FinishCycleDisassembly(object sender, DisassemblyEventArgs e)
-        {
-            Console.Write(e.Output);
+            Console.WriteLine(e.Output);
         }
     }
 }

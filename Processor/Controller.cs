@@ -10,8 +10,12 @@
     public class Controller : Game, IDisposable
     {
         private const Keys ToggleKey = Keys.F12;
-        private const int CyclesPerFrameFast = 30;
-        private const int CyclesPerFrameSlow = 10;
+
+        private const int CyclesPerFrameFast = 22;
+        private const int CyclesPerFrameSlow = 13;
+
+        private const int PixelSizeHigh = 5;
+        private const int PixelSizeLow = 10;
 
         private readonly EmulationType machineType;
         private readonly string game;
@@ -61,9 +65,9 @@
             get
             {
                 // The following gives:
-                //  HP-48 running at 1.32 kOps
-                //  VIP running at .78 kOps
-                return this.machineType == EmulationType.HP48 ? 22 : 13;
+                //  HP-48 running 22 FPS at 1.32 kOps
+                //  VIP running 13 FPS at .78 kOps
+                return this.machineType == EmulationType.HP48 ? CyclesPerFrameFast : CyclesPerFrameSlow;
             }
         }
 
@@ -71,7 +75,7 @@
         {
             get
             {
-                return this.processor.Display.HighResolution ? 5 : 10;
+                return this.processor.Display.HighResolution ? PixelSizeHigh : PixelSizeLow;
             }
         }
 

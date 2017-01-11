@@ -109,9 +109,7 @@
 
         public event EventHandler<EventArgs> EmulatedCycle;
 
-        public event EventHandler<DisassemblyEventArgs> BeginCycleDisassembly;
-
-        public event EventHandler<DisassemblyEventArgs> FinishCycleDisassembly;
+        public event EventHandler<DisassemblyEventArgs> DisassembleInstruction;
 
         public bool Finished
         {
@@ -237,13 +235,13 @@
             this.display.Clear();
 
             // Clear stack
-            Array.Clear(this.stack, 0, 16);
+            Array.Clear(this.stack, 0, this.stack.Length);
 
             // Clear registers V0-VF
-            Array.Clear(this.v, 0, 16);
+            Array.Clear(this.v, 0, this.v.Length);
 
             // Clear memory
-            Array.Clear(this.memory, 0, 4096);
+            Array.Clear(this.memory, 0, this.memory.Length);
 
             // Load fonts
             Array.Copy(standardFont, 0, this.memory, StandardFontOffset, 16 * 5);
@@ -330,13 +328,11 @@
             {
                 handler(this, EventArgs.Empty);
             }
-
-            this.OnBeginCycleDisassembly(programCounter, instruction, address, operand, n, x, y);
         }
 
         protected virtual void OnEmulatedCycle(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
         {
-            this.OnFinishCycleDisassembly(programCounter, instruction, address, operand, n, x, y);
+            this.OnDisassembleInstruction(programCounter, instruction, address, operand, n, x, y);
 
             var handler = this.EmulatedCycle;
             if (handler != null)
@@ -345,22 +341,9 @@
             }
         }
 
-        protected virtual void OnBeginCycleDisassembly(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        protected virtual void OnDisassembleInstruction(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
         {
-            this.mnemomicFormat = "UNKNOWN";
-            this.usedAddress = this.usedOperand = this.usedN = this.usedX = this.usedY = false;
-
-            var handler = this.BeginCycleDisassembly;
-            if (handler != null)
-            {
-                var output = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode);
-                handler(this, new DisassemblyEventArgs(output));
-            }
-        }
-
-        protected virtual void OnFinishCycleDisassembly(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
-        {
-            var handler = this.FinishCycleDisassembly;
+            var handler = this.DisassembleInstruction;
             if (handler != null)
             {
                 var objects = new List<object>();
@@ -390,9 +373,10 @@
                     objects.Add(operand);
                 }
 
-                var output = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat + "\n", objects.ToArray());
+                var pre = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", this.pc, this.opcode);
+                var post = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat, objects.ToArray());
 
-                handler(this, new DisassemblyEventArgs(output));
+                handler(this, new DisassemblyEventArgs(pre + post));
             }
         }
 
@@ -423,263 +407,361 @@
             }
 
             var programCounter = this.pc;
-            this.OnEmulatingCycle(programCounter, this.opcode, nnn, nn, n, x, y);
-
             this.pc += 2;
 
+            this.OnEmulatingCycle(programCounter, this.opcode, nnn, nn, n, x, y);
+            try
+            {
+                this.EmulateInstruction(nnn, nn, n, x, y);
+            }
+            finally
+            {
+                this.OnEmulatedCycle(programCounter, this.opcode, nnn, nn, n, x, y);
+            }
+        }
+
+        private void EmulateInstruction(short nnn, byte nn, int n, int x, int y)
+        {
             switch (this.opcode & 0xf000)
             {
                 case 0x0000:    // Call
-                    switch (low)
-                    {
-                        case 0xe0:  // 00E0     Display     disp_clear()
-                            this.CLS();
-                            break;
-
-                        case 0xfa:
-                            this.COMPATIBILITY();
-                            break;
-
-                        case 0xfb:
-                            this.SCRIGHT();
-                            break;
-
-                        case 0xfc:
-                            this.SCLEFT();
-                            break;
-
-                        case 0xfd:
-                            this.EXIT();
-                            break;
-
-                        case 0xfe:
-                            this.LOW();
-                            break;
-
-                        case 0xff:
-                            this.HIGH();
-                            break;
-
-                        case 0xee:  // 00EE     Flow        return;
-                            this.RET();
-                            break;
-
-                        default:
-                            switch (y)
-                            {
-                                case 0xc:
-                                    this.SCDOWN(n);
-                                    break;
-
-                                default:
-                                    throw new IllegalInstructionException(this.opcode, "RCA1802 Call");
-                            }
-
-                            break;
-                    }
-
+                    this.EmulateInstructions_0(nn, n, y);
                     break;
 
                 // Jump
                 case 0x1000:        // 1NNN     Flow        goto NNN;
-                    this.JP(nnn);
+                    this.EmulateInstructions_1(nnn);
                     break;
 
                 // Call
                 case 0x2000:        // 2NNN     Flow        *(0xNNN)()
-                    this.CALL(nnn);
+                    this.EmulateInstructions_2(nnn);
                     break;
 
                 // Conditional
                 case 0x3000:        // 3XNN     Cond        if(Vx==NN)
-                    this.SE(x, nn);
+                    this.EmulateInstructions_3(nn, x);
                     break;
 
                 // Conditional
                 case 0x4000:        // 4XNN     Cond        if(Vx!=NN)
-                    this.SNE(x, nn);
+                    this.EmulateInstructions_4(nn, x);
                     break;
 
                 // Conditional
                 case 0x5000:        // 5XNN     Cond        if(Vx==Vy)
-                    this.SE(x, y);
+                    this.EmulateInstructions_5(x, y);
                     break;
 
                 case 0x6000:        // 6XNN     Const       Vx = NN
-                    this.LD(x, nn);
+                    this.EmulateInstructions_6(nn, x);
                     break;
 
                 case 0x7000:        // 7XNN     Const       Vx += NN
-                    this.ADD(x, nn);
+                    this.EmulateInstructions_7(nn, x);
                     break;
 
                 case 0x8000:
-                    switch (n)
-                    {
-                        case 0x0:   // 8XY0     Assign      Vx=Vy
-                            this.LD(x, y);
-                            break;
-
-                        case 0x1:   // 8XY1     BitOp       Vx=Vx|Vy
-                            this.OR(x, y);
-                            break;
-
-                        case 0x2:   // 8XY2     BitOp       Vx=Vx&Vy
-                            this.AND(x, y);
-                            break;
-
-                        case 0x3:   // 8XY3     BitOp       Vx=Vx^Vy
-                            this.XOR(x, y);
-                            break;
-
-                        case 0x4:   // 8XY4     Math        Vx += Vy
-                            this.ADD(x, y);
-                            break;
-
-                        case 0x5:   // 8XY5     Math        Vx -= Vy
-                            this.SUB(x, y);
-                            break;
-
-                        case 0x6:   // 8XY6     Math        Vx >> 1
-                            this.SHR(x, y);
-                            break;
-
-                        case 0x7:   // 8XY7     Math        Vx=Vy-Vx
-                            this.SUBN(x, y);
-                            break;
-
-                        case 0xe:   // 8XYE     Math        Vx << 1
-                            this.SHL(x, y);
-                            break;
-
-                        default:
-                            throw new IllegalInstructionException(this.opcode);
-                    }
-
+                    this.EmulateInstructions_8(n, x, y);
                     break;
 
                 case 0x9000:
-                    switch (n)
-                    {
-                        case 0:     // 9XY0     Cond        if(Vx!=Vy)
-                            this.SNE(x, y);
-                            break;
-
-                        default:
-                            throw new IllegalInstructionException(this.opcode);
-                    }
-
+                    this.EmulateInstructions_9(n, x, y);
                     break;
 
                 case 0xa000:        // ANNN     MEM         I = NNN
-                    this.LD_I(nnn);
+                    this.EmulateInstructions_A(nnn);
                     break;
 
                 case 0xB000:        // BNNN     Flow        PC=V0+NNN
-                    this.JP_V0(x, nnn);
+                    this.EmulateInstructions_B(nnn, x);
                     break;
 
                 case 0xc000:        // CXNN     Rand        Vx=rand()&NN
-                    this.RND(x, nn);
+                    this.EmulateInstructions_C(nn, x);
                     break;
 
                 case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
-                    switch (n)
-                    {
-                        case 0:
-                            this.XDRW(x, y);
-                            break;
-
-                        default:
-                            this.DRW(x, y, n);
-                            break;
-                    }
-
+                    this.EmulateInstructions_D(n, x, y);
                     break;
 
                 case 0xe000:
-                    switch (nn)
-                    {
-                        case 0x9E:  // EX9E     KeyOp       if(key()==Vx)
-                            this.SKP(x);
-                            break;
-
-                        case 0xa1:  // EXA1     KeyOp       if(key()!=Vx)
-                            this.SKNP(x);
-                            break;
-
-                        default:
-                            throw new IllegalInstructionException(this.opcode);
-                    }
-
+                    this.EmulateInstructions_E(nn, x);
                     break;
 
                 case 0xf000:
-                    switch (nn)
-                    {
-                        case 0x07:  // FX07     Timer       Vx = get_delay()
-                            this.LD_Vx_DT(x);
-                            break;
-
-                        case 0x0a:  // FX0A     KeyOp       Vx = get_key()
-                            this.LD_Vx_K(x);
-                            break;
-
-                        case 0x15:  // FX15     Timer       delay_timer(Vx)
-                            this.LD_DT_Vx(x);
-                            break;
-
-                        case 0x18:  // FX18     Sound       sound_timer(Vx)
-                            this.LD_ST_Vx(x);
-                            break;
-
-                        case 0x1e:  // FX1E     Mem         I +=Vx
-                            this.ADD_I_Vx(x);
-                            break;
-
-                        case 0x29:  // FX29     Mem         I=sprite_addr[Vx]
-                            this.LD_F_Vx(x);
-                            break;
-
-                        case 0x30:
-                            this.LD_HF_Vx(x);
-                            break;
-
-                        case 0x33:  // FX33     BCD
-                                    //                      set_BCD(Vx);
-                                    //                      *(I+0)=BCD(3);
-                                    //                      *(I+1)=BCD(2);
-                                    //                      *(I+2)=BCD(1);
-                            this.LD_B_Vx(x);
-                            break;
-
-                        case 0x55:  // FX55     MEM         reg_dump(Vx,&I)
-                            this.LD_II_Vx(x);
-                            break;
-
-                        case 0x65:  // FX65     MEM         reg_load(Vx,&I)
-                            this.LD_Vx_II(x);
-                            break;
-
-                        case 0x75:
-                            this.LD_R_Vx(x);
-                            break;
-
-                        case 0x85:
-                            this.LD_Vx_R(x);
-                            break;
-
-                        default:
-                            throw new IllegalInstructionException(this.opcode);
-                    }
-
+                    this.EmulateInstructions_F(nn, x);
                     break;
 
                 default:
                     throw new IllegalInstructionException(this.opcode);
             }
+        }
 
-            this.OnEmulatedCycle(programCounter, this.opcode, nnn, nn, n, x, y);
+        private void EmulateInstructions_F(byte nn, int x)
+        {
+            this.usedX = true;
+            switch (nn)
+            {
+                case 0x07:  // FX07     Timer       Vx = get_delay()
+                    this.LD_Vx_DT(x);
+                    break;
+
+                case 0x0a:  // FX0A     KeyOp       Vx = get_key()
+                    this.LD_Vx_K(x);
+                    break;
+
+                case 0x15:  // FX15     Timer       delay_timer(Vx)
+                    this.LD_DT_Vx(x);
+                    break;
+
+                case 0x18:  // FX18     Sound       sound_timer(Vx)
+                    this.LD_ST_Vx(x);
+                    break;
+
+                case 0x1e:  // FX1E     Mem         I +=Vx
+                    this.ADD_I_Vx(x);
+                    break;
+
+                case 0x29:  // FX29     Mem         I=sprite_addr[Vx]
+                    this.LD_F_Vx(x);
+                    break;
+
+                case 0x30:
+                    this.LD_HF_Vx(x);
+                    break;
+
+                case 0x33:  // FX33     BCD
+                            //                      set_BCD(Vx);
+                            //                      *(I+0)=BCD(3);
+                            //                      *(I+1)=BCD(2);
+                            //                      *(I+2)=BCD(1);
+                    this.LD_B_Vx(x);
+                    break;
+
+                case 0x55:  // FX55     MEM         reg_dump(Vx,&I)
+                    this.LD_II_Vx(x);
+                    break;
+
+                case 0x65:  // FX65     MEM         reg_load(Vx,&I)
+                    this.LD_Vx_II(x);
+                    break;
+
+                case 0x75:
+                    this.LD_R_Vx(x);
+                    break;
+
+                case 0x85:
+                    this.LD_Vx_R(x);
+                    break;
+
+                default:
+                    throw new IllegalInstructionException(this.opcode);
+            }
+        }
+
+        private void EmulateInstructions_E(byte nn, int x)
+        {
+            this.usedX = true;
+            switch (nn)
+            {
+                case 0x9E:  // EX9E     KeyOp       if(key()==Vx)
+                    this.SKP(x);
+                    break;
+
+                case 0xa1:  // EXA1     KeyOp       if(key()!=Vx)
+                    this.SKNP(x);
+                    break;
+
+                default:
+                    throw new IllegalInstructionException(this.opcode);
+            }
+        }
+
+        private void EmulateInstructions_D(int n, int x, int y)
+        {
+            this.usedX = this.usedY = true;
+            switch (n)
+            {
+                case 0:
+                    this.XDRW(x, y);
+                    break;
+
+                default:
+                    this.DRW(x, y, n);
+                    break;
+            }
+        }
+
+        private void EmulateInstructions_C(byte nn, int x)
+        {
+            this.usedX = this.usedOperand = true;
+            this.RND(x, nn);
+        }
+
+        private void EmulateInstructions_B(short nnn, int x)
+        {
+            this.usedAddress = true;
+            this.JP_V0(x, nnn);
+        }
+
+        private void EmulateInstructions_A(short nnn)
+        {
+            this.usedAddress = true;
+            this.LD_I(nnn);
+        }
+
+        private void EmulateInstructions_9(int n, int x, int y)
+        {
+            this.usedX = this.usedY = true;
+            switch (n)
+            {
+                case 0:     // 9XY0     Cond        if(Vx!=Vy)
+                    this.SNE(x, y);
+                    break;
+
+                default:
+                    throw new IllegalInstructionException(this.opcode);
+            }
+        }
+
+        private void EmulateInstructions_8(int n, int x, int y)
+        {
+            this.usedX = this.usedY = true;
+            switch (n)
+            {
+                case 0x0:   // 8XY0     Assign      Vx=Vy
+                    this.LD(x, y);
+                    break;
+
+                case 0x1:   // 8XY1     BitOp       Vx=Vx|Vy
+                    this.OR(x, y);
+                    break;
+
+                case 0x2:   // 8XY2     BitOp       Vx=Vx&Vy
+                    this.AND(x, y);
+                    break;
+
+                case 0x3:   // 8XY3     BitOp       Vx=Vx^Vy
+                    this.XOR(x, y);
+                    break;
+
+                case 0x4:   // 8XY4     Math        Vx += Vy
+                    this.ADD(x, y);
+                    break;
+
+                case 0x5:   // 8XY5     Math        Vx -= Vy
+                    this.SUB(x, y);
+                    break;
+
+                case 0x6:   // 8XY6     Math        Vx >> 1
+                    this.SHR(x, y);
+                    break;
+
+                case 0x7:   // 8XY7     Math        Vx=Vy-Vx
+                    this.SUBN(x, y);
+                    break;
+
+                case 0xe:   // 8XYE     Math        Vx << 1
+                    this.SHL(x, y);
+                    break;
+
+                default:
+                    throw new IllegalInstructionException(this.opcode);
+            }
+        }
+
+        private void EmulateInstructions_7(byte nn, int x)
+        {
+            this.usedX = this.usedOperand = true;
+            this.ADD(x, nn);
+        }
+
+        private void EmulateInstructions_6(byte nn, int x)
+        {
+            this.usedX = this.usedOperand = true;
+            this.LD(x, nn);
+        }
+
+        private void EmulateInstructions_5(int x, int y)
+        {
+            this.usedX = this.usedY = true;
+            this.SE(x, y);
+        }
+
+        private void EmulateInstructions_4(byte nn, int x)
+        {
+            this.usedOperand = this.usedX = true;
+            this.SNE(x, nn);
+        }
+
+        private void EmulateInstructions_3(byte nn, int x)
+        {
+            this.usedOperand = this.usedX = true;
+            this.SE(x, nn);
+        }
+
+        private void EmulateInstructions_2(short nnn)
+        {
+            this.usedAddress = true;
+            this.CALL(nnn);
+        }
+
+        private void EmulateInstructions_1(short nnn)
+        {
+            this.usedAddress = true;
+            this.JP(nnn);
+        }
+
+        private void EmulateInstructions_0(byte low, int n, int y)
+        {
+            switch (low)
+            {
+                case 0xe0:  // 00E0     Display     disp_clear()
+                    this.CLS();
+                    break;
+
+                case 0xfa:
+                    this.COMPATIBILITY();
+                    break;
+
+                case 0xfb:
+                    this.SCRIGHT();
+                    break;
+
+                case 0xfc:
+                    this.SCLEFT();
+                    break;
+
+                case 0xfd:
+                    this.EXIT();
+                    break;
+
+                case 0xfe:
+                    this.LOW();
+                    break;
+
+                case 0xff:
+                    this.HIGH();
+                    break;
+
+                case 0xee:  // 00EE     Flow        return;
+                    this.RET();
+                    break;
+
+                default:
+                    switch (y)
+                    {
+                        case 0xc:
+                            this.SCDOWN(n);
+                            break;
+
+                        default:
+                            throw new IllegalInstructionException(this.opcode, "RCA1802 Call");
+                    }
+
+                    break;
+            }
         }
 
         ////
@@ -701,7 +783,7 @@
             // Copy rows bottom to top
             for (int y = screenHeight - n - 1; y >= 0; --y)
             {
-                this.display.CopyRow(y + n, y);
+                this.display.CopyRow(y, y + n);
             }
 
             // Remove the top columns, blanked by the scroll effect
@@ -743,7 +825,7 @@
             // Copy colummns from right to left
             for (int x = screenWidth - n - 1; x >= 0; --x)
             {
-                this.display.CopyColumn(x + n, x);
+                this.display.CopyColumn(x, x + n);
             }
 
             // Remove the leftmost columns, blanked by the scroll effect
@@ -774,7 +856,7 @@
             // Copy columns from left to right
             for (int x = 0; x < screenWidth - n - 1; ++x)
             {
-                this.display.CopyColumn(x, x + n);
+                this.display.CopyColumn(x + n, x);
             }
 
             // Remove the rightmost columns, blanked by the scroll effect
@@ -813,8 +895,6 @@
         private void LD_R_Vx(int x)
         {
             this.mnemomicFormat = "LD\tR,V{0:X1}";
-            this.usedX = true;
-
             this.VerifyRunningHp48();
             Array.Copy(this.v, this.r, x + 1);
         }
@@ -826,8 +906,6 @@
         private void LD_Vx_R(int x)
         {
             this.mnemomicFormat = "LD\tV{0:X1},R";
-            this.usedX = true;
-
             this.VerifyRunningHp48();
             Array.Copy(this.r, this.v, x + 1);
         }
@@ -861,14 +939,12 @@
         private void JP(short nnn)
         {
             this.mnemomicFormat = "JP\t{0:X3}";
-            this.usedAddress = true;
             this.pc = nnn;
         }
 
         private void CALL(short nnn)
         {
             this.mnemomicFormat = "CALL\t{0:X3}";
-            this.usedAddress = true;
             this.stack[this.sp++] = (ushort)this.pc;
             this.pc = nnn;
         }
@@ -876,8 +952,6 @@
         private void SE(int x, byte nn)
         {
             this.mnemomicFormat = "SE\tV{0:X1},#{1:X2}";
-            this.usedOperand = this.usedX = true;
-
             if (this.v[x] == nn)
             {
                 this.pc += 2;
@@ -887,8 +961,6 @@
         private void SNE(int x, byte nn)
         {
             this.mnemomicFormat = "SNE\tV{0:X1},#{1:X2}";
-            this.usedOperand = this.usedX = true;
-
             if (this.v[x] != nn)
             {
                 this.pc += 2;
@@ -898,8 +970,6 @@
         private void SE(int x, int y)
         {
             this.mnemomicFormat = "SE\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
-
             if (this.v[x] == this.v[y])
             {
                 this.pc += 2;
@@ -909,53 +979,42 @@
         private void LD(int x, byte nn)
         {
             this.mnemomicFormat = "LD\tV{0:X1},#{1:X2}";
-            this.usedX = this.usedOperand = true;
-
             this.v[x] = nn;
         }
 
         private void ADD(int x, byte nn)
         {
             this.mnemomicFormat = "ADD\tV{0:X1},#{1:X2}";
-            this.usedX = this.usedOperand = true;
-
             this.v[x] += nn;
         }
 
         private void LD(int x, int y)
         {
             this.mnemomicFormat = "LD\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
-
             this.v[x] = this.v[y];
         }
 
         private void OR(int x, int y)
         {
             this.mnemomicFormat = "OR\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
-
             this.v[x] |= this.v[y];
         }
 
         private void AND(int x, int y)
         {
             this.mnemomicFormat = "AND\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
             this.v[x] &= this.v[y];
         }
 
         private void XOR(int x, int y)
         {
             this.mnemomicFormat = "XOR\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
             this.v[x] ^= this.v[y];
         }
 
         private void ADD(int x, int y)
         {
             this.mnemomicFormat = "ADD\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
             this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
             this.v[x] += this.v[y];
         }
@@ -963,7 +1022,6 @@
         private void SUB(int x, int y)
         {
             this.mnemomicFormat = "SUB\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
             this.v[0xf] = (byte)(this.v[x] >= this.v[y] ? 1 : 0);
             this.v[x] -= this.v[y];
         }
@@ -975,16 +1033,13 @@
             if (this.emulating == EmulationType.ComsmacVip)
             {
                 this.mnemomicFormat = "SHR\tV{0:X1},V{0:X1}";
-                this.usedX = this.usedY = true;
-
                 this.v[y] >>= 1;
                 this.v[x] = this.v[y];
             }
             else
             {
                 this.mnemomicFormat = "SHR\tV{0:X1}";
-                this.usedX = true;
-
+                this.usedY = false;
                 this.v[x] >>= 1;
             }
 
@@ -994,8 +1049,6 @@
         private void SUBN(int x, int y)
         {
             this.mnemomicFormat = "SUBN\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
-
             this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 0 : 1);
             this.v[x] = (byte)(this.v[y] - this.v[x]);
         }
@@ -1009,16 +1062,13 @@
             if (this.emulating == EmulationType.ComsmacVip)
             {
                 this.mnemomicFormat = "SHL\tV{0:X1},V{1:X1}";
-                this.usedX = this.usedY = true;
-
                 this.v[y] <<= 1;
                 this.v[x] = this.v[y];
             }
             else
             {
                 this.mnemomicFormat = "SHL\tV{0:X1}";
-                this.usedX = true;
-
+                this.usedY = false;
                 this.v[x] <<= 1;
             }
         }
@@ -1026,8 +1076,6 @@
         private void SNE(int x, int y)
         {
             this.mnemomicFormat = "SNE\tV{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
-
             if (this.v[x] != this.v[y])
             {
                 this.pc += 2;
@@ -1037,15 +1085,12 @@
         private void LD_I(short nnn)
         {
             this.mnemomicFormat = "LD\tI,#{0:X3}";
-            this.usedAddress = true;
-
             this.i = nnn;
         }
 
         private void JP_V0(int x, short nnn)
         {
             this.mnemomicFormat = "JP\t[V0],#{0:X3}";
-            this.usedAddress = true;
 
             // https://github.com/Chromatophore/HP48-Superchip#bnnn
             // Sets PC to address NNN + v0 -
@@ -1059,14 +1104,12 @@
         private void RND(int x, byte nn)
         {
             this.mnemomicFormat = "RND\tV{0:X1},#{1:X2}";
-            this.usedOperand = this.usedX = true;
             this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
         }
 
         private void XDRW(int x, int y)
         {
             this.mnemomicFormat = "XDRW V{0:X1},V{1:X1}";
-            this.usedX = this.usedY = true;
             this.VerifyRunningHp48();
             this.Draw(x, y, 16, 16);
         }
@@ -1074,15 +1117,13 @@
         private void DRW(int x, int y, int n)
         {
             this.mnemomicFormat = "DRW\tV{0:X1},V{1:X1},#{2:X1}";
-            this.usedX = this.usedY = this.usedN = true;
+            this.usedN = true;
             this.Draw(x, y, 8, n);
         }
 
         private void SKP(int x)
         {
             this.mnemomicFormat = "SKP\tV{0:X1}";
-            this.usedX = true;
-
             if (this.keyboard.IsKeyPressed(this.v[x]))
             {
                 this.pc += 2;
@@ -1092,8 +1133,6 @@
         private void SKNP(int x)
         {
             this.mnemomicFormat = "SKNP\tV{0:X1}";
-            this.usedX = true;
-
             if (!this.keyboard.IsKeyPressed(this.v[x]))
             {
                 this.pc += 2;
@@ -1103,7 +1142,6 @@
         private void LD_Vx_II(int x)
         {
             this.mnemomicFormat = "LD\tV{0:X1},[I]";
-            this.usedX = true;
 
             Array.Copy(this.memory, this.i, this.v, 0, x + 1);
 
@@ -1118,7 +1156,6 @@
         private void LD_II_Vx(int x)
         {
             this.mnemomicFormat = "LD\t[I],V{0:X1}";
-            this.usedX = true;
 
             Array.Copy(this.v, 0, this.memory, this.i, x + 1);
 
@@ -1133,7 +1170,6 @@
         private void LD_B_Vx(int x)
         {
             this.mnemomicFormat = "LD\tB,V{0:X1}";
-            this.usedX = true;
 
             var content = this.v[x];
             this.memory[this.i] = (byte)(content / 100);
@@ -1144,21 +1180,18 @@
         private void LD_F_Vx(int x)
         {
             this.mnemomicFormat = "LD\tF,V{0:X1}";
-            this.usedX = true;
             this.i = (short)(StandardFontOffset + (5 * this.v[x]));
         }
 
         private void LD_HF_Vx(int x)
         {
             this.mnemomicFormat = "LD\tHF,V{0:X1}";
-            this.usedX = true;
             this.i = (short)(HighFontOffset + (10 * this.v[x]));
         }
 
         private void ADD_I_Vx(int x)
         {
             this.mnemomicFormat = "ADD\tI,V{0:X1}";
-            this.usedX = true;
 
             // From wikipedia entry on CHIP-8:
             // VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0
@@ -1172,21 +1205,18 @@
         private void LD_ST_Vx(int x)
         {
             this.mnemomicFormat = "LD\tST,V{0:X1}";
-            this.usedX = true;
             this.soundTimer = this.v[x];
         }
 
         private void LD_DT_Vx(int x)
         {
             this.mnemomicFormat = "LD\tDT,V{0:X1}";
-            this.usedX = true;
             this.delayTimer = this.v[x];
         }
 
         private void LD_Vx_K(int x)
         {
             this.mnemomicFormat = "LD\tV{0:X1},K";
-            this.usedX = true;
             this.waitingForKeyPress = true;
             this.waitingForKeyPressRegister = x;
         }
@@ -1194,7 +1224,6 @@
         private void LD_Vx_DT(int x)
         {
             this.mnemomicFormat = "LD\tV{0:X1},DT";
-            this.usedX = true;
             this.v[x] = this.delayTimer;
         }
 
