@@ -28,6 +28,8 @@
             get;
         }
 
+        void Initialise();
+
         int Draw(byte[] memory, int address, int drawX, int drawY, int width, int height);
 
         void CopyRow(int source, int destination);

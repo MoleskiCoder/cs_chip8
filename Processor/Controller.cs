@@ -11,13 +11,9 @@
     {
         private const Keys ToggleKey = Keys.F12;
 
-        private const int CyclesPerFrameFast = 22;
-        private const int CyclesPerFrameSlow = 13;
-
         private const int PixelSizeHigh = 5;
         private const int PixelSizeLow = 10;
 
-        private readonly EmulationType machineType;
         private readonly string game;
         private readonly GraphicsDeviceManager graphics;
         private readonly SoundPlayer soundPlayer = new SoundPlayer();
@@ -25,7 +21,7 @@
         private readonly Color backgroundColour = Color.Black;
         private readonly Color foregroundColour = Color.White;
 
-        private Chip8 processor;
+        private readonly Chip8 processor;
 
         private SpriteBatch spriteBatch;
         private Texture2D pixel;
@@ -34,9 +30,9 @@
 
         private bool disposed = false;
 
-        public Controller(EmulationType machineType, string game)
+        public Controller(Chip8 processor, string game)
         {
-            this.machineType = machineType;
+            this.processor = processor;
             this.game = game;
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
@@ -47,27 +43,6 @@
             get
             {
                 return this.processor;
-            }
-        }
-
-        // https://github.com/Chromatophore/HP48-Superchip#platform-speed
-        // The HP48 calculator is much faster than the Cosmac VIP, but,
-        // there is still no solid understanding of how much faster it is for
-        // most instructions for the purposes of designing compelling programs with
-        // Octo. A modified version of cmark77, a Chip-8 graphical benchmark tool
-        // written by taqueso on the Something Awful forums was used and
-        // yielded scores of 0.80 kOPs in standard/lores and 1.3 kOps in extended/hires.
-        // However graphical ops are significantly more costly than other ops on period
-        // hardware versus Octo (where they are basically free) and as a result a raw
-        // computational cycles/second speed assessment still has not been completed.
-        protected int CyclesPerFrame
-        {
-            get
-            {
-                // The following gives:
-                //  HP-48 running 22 FPS at 1.32 kOps
-                //  VIP running 13 FPS at .78 kOps
-                return this.machineType == EmulationType.HP48 ? CyclesPerFrameFast : CyclesPerFrameSlow;
             }
         }
 
@@ -125,12 +100,15 @@
             this.pixel = new Texture2D(GraphicsDevice, 1, 1);
             this.pixel.SetData<Color>(new Color[] { this.foregroundColour });
 
-            this.processor = new Chip8(this.machineType, new MonoGameKeyboard(), new BitmappedGraphics());
-
             this.SetLowResolution();
 
-            this.processor.HighResolutionConfigured += this.Processor_HighResolution;
-            this.processor.LowResolutionConfigured += this.Processor_LowResolution;
+            var schip = this.processor as Schip;
+            if (schip != null)
+            {
+                schip.HighResolutionConfigured += this.Processor_HighResolution;
+                schip.LowResolutionConfigured += this.Processor_LowResolution;
+            }
+
             this.processor.BeepStarting += this.Processor_BeepStarting;
             this.processor.BeepStopped += this.Processor_BeepStopped;
 
@@ -167,7 +145,7 @@
 
         protected virtual void RunFrame()
         {
-            for (int i = 0; i < this.CyclesPerFrame; ++i)
+            for (int i = 0; i < this.processor.CyclesPerFrame; ++i)
             {
                 if (this.RunCycle())
                 {

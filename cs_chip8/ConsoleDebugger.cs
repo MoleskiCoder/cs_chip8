@@ -19,9 +19,9 @@
 
         private bool disposed = false;
 
-        public ConsoleDebugger(EmulationType machine, string game)
+        public ConsoleDebugger(Chip8 processor, string game)
         {
-            this.debugger = new Debugger(machine, game);
+            this.debugger = new Debugger(processor, game);
             this.debuggerAvailable = new ManualResetEvent(false);
             this.stepping = new ManualResetEvent(true);
         }

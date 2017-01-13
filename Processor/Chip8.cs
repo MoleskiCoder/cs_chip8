@@ -9,7 +9,6 @@
     public class Chip8
     {
         private const int StandardFontOffset = 0x1b0;
-        private const int HighFontOffset = 0x110;
 
         private static byte[] standardFont =
         { 
@@ -31,34 +30,11 @@
             0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         };
 
-        private static byte[] highFont =
-        {
-            0x7C, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x7C, 0x00, // 0
-            0x08, 0x18, 0x38, 0x08, 0x08, 0x08, 0x08, 0x08, 0x3C, 0x00, // 1
-            0x7C, 0x82, 0x02, 0x02, 0x04, 0x18, 0x20, 0x40, 0xFE, 0x00, // 2
-            0x7C, 0x82, 0x02, 0x02, 0x3C, 0x02, 0x02, 0x82, 0x7C, 0x00, // 3
-            0x84, 0x84, 0x84, 0x84, 0xFE, 0x04, 0x04, 0x04, 0x04, 0x00, // 4
-            0xFE, 0x80, 0x80, 0x80, 0xFC, 0x02, 0x02, 0x82, 0x7C, 0x00, // 5
-            0x7C, 0x82, 0x80, 0x80, 0xFC, 0x82, 0x82, 0x82, 0x7C, 0x00, // 6
-            0xFE, 0x02, 0x04, 0x08, 0x10, 0x20, 0x20, 0x20, 0x20, 0x00, // 7
-            0x7C, 0x82, 0x82, 0x82, 0x7C, 0x82, 0x82, 0x82, 0x7C, 0x00, // 8
-            0x7C, 0x82, 0x82, 0x82, 0x7E, 0x02, 0x02, 0x82, 0x7C, 0x00, // 9
-            0x10, 0x28, 0x44, 0x82, 0x82, 0xFE, 0x82, 0x82, 0x82, 0x00, // A
-            0xFC, 0x82, 0x82, 0x82, 0xFC, 0x82, 0x82, 0x82, 0xFC, 0x00, // B
-            0x7C, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x82, 0x7C, 0x00, // C
-            0xFC, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0xFC, 0x00, // D
-            0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0xFE, 0x00, // E
-            0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0x80, 0x00, // F
-        };
-
-        private readonly EmulationType emulating;
-
         private readonly Random randomNumbers = new Random();
 
         private readonly byte[] memory = new byte[4096];
         private readonly byte[] v = new byte[16];
         private readonly ushort[] stack = new ushort[16];
-        private readonly byte[] r = new byte[8]; // HP48 flags
 
         private short i;
         private short pc;
@@ -77,8 +53,6 @@
 
         private bool finished = false;
 
-        private bool compatibility = false;
-
         // Disassembly members...
         private string mnemomicFormat;
         private bool usedAddress;
@@ -90,16 +64,11 @@
         private IKeyboardDevice keyboard;
         private IGraphicsDevice display;
 
-        public Chip8(EmulationType emulating, IKeyboardDevice keyboard, IGraphicsDevice display)
+        public Chip8(IKeyboardDevice keyboard, IGraphicsDevice display)
         {
-            this.emulating = emulating;
             this.keyboard = keyboard;
             this.display = display;
         }
-
-        public event EventHandler<EventArgs> HighResolutionConfigured;
-
-        public event EventHandler<EventArgs> LowResolutionConfigured;
 
         public event EventHandler<EventArgs> BeepStarting;
 
@@ -221,31 +190,125 @@
             }
         }
 
-        public void Initialise()
+        // https://github.com/Chromatophore/HP48-Superchip#platform-speed
+        // The HP48 calculator is much faster than the Cosmac VIP, but,
+        // there is still no solid understanding of how much faster it is for
+        // most instructions for the purposes of designing compelling programs with
+        // Octo. A modified version of cmark77, a Chip-8 graphical benchmark tool
+        // written by taqueso on the Something Awful forums was used and
+        // yielded scores of 0.80 kOPs in standard/lores and 1.3 kOps in extended/hires.
+        // However graphical ops are significantly more costly than other ops on period
+        // hardware versus Octo (where they are basically free) and as a result a raw
+        // computational cycles/second speed assessment still has not been completed.
+        public virtual int CyclesPerFrame
+        {
+            get
+            {
+                // Running 13 FPS at .78 kOps
+                return 13;
+            }
+        }
+
+        protected string MnemomicFormat
+        {
+            get
+            {
+                return this.mnemomicFormat;
+            }
+
+            set
+            {
+                this.mnemomicFormat = value;
+            }
+        }
+
+        protected bool UsedAddress
+        {
+            get
+            {
+                return this.usedAddress;
+            }
+
+            set
+            {
+                this.usedAddress = value;
+            }
+        }
+
+        protected bool UsedOperand
+        {
+            get
+            {
+                return this.usedOperand;
+            }
+
+            set
+            {
+                this.usedOperand = value;
+            }
+        }
+
+        protected bool UsedN
+        {
+            get
+            {
+                return this.usedN;
+            }
+
+            set
+            {
+                this.usedN = value;
+            }
+        }
+
+        protected bool UsedX
+        {
+            get
+            {
+                return this.usedX;
+            }
+
+            set
+            {
+                this.usedX = value;
+            }
+        }
+
+        protected bool UsedY
+        {
+            get
+            {
+                return this.usedY;
+            }
+
+            set
+            {
+                this.usedY = value;
+            }
+        }
+
+        public virtual void Initialise()
         {
             this.Finished = false;
             this.DrawNeeded = false;
-            this.display.HighResolution = false;
 
-            this.pc = 0x200;     // Program counter starts at 0x200
-            this.i = 0;          // Reset index register
-            this.sp = 0;         // Reset stack pointer
+            this.PC = 0x200;     // Program counter starts at 0x200
+            this.I = 0;          // Reset index register
+            this.SP = 0;         // Reset stack pointer
 
-            this.display.AllocateMemory();
-            this.display.Clear();
+            this.Display.Initialise();
 
             // Clear stack
-            Array.Clear(this.stack, 0, this.stack.Length);
+            Array.Clear(this.Stack, 0, this.Stack.Length);
 
             // Clear registers V0-VF
-            Array.Clear(this.v, 0, this.v.Length);
+            Array.Clear(this.V, 0, this.V.Length);
 
             // Clear memory
-            Array.Clear(this.memory, 0, this.memory.Length);
+            Array.Clear(this.Memory, 0, this.Memory.Length);
 
             // Load fonts
-            Array.Copy(standardFont, 0, this.memory, StandardFontOffset, 16 * 5);
-            Array.Copy(highFont, 0, this.memory, HighFontOffset, 16 * 10);
+            Array.Copy(standardFont, 0, this.Memory, StandardFontOffset, 16 * 5);
 
             // Reset timers
             this.delayTimer = this.soundTimer = 0;
@@ -273,30 +336,6 @@
         {
             this.UpdateDelayTimer();
             this.UpdateSoundTimer();
-        }
-
-        protected void OnHighResolution()
-        {
-            this.display.HighResolution = true;
-            this.display.AllocateMemory();
-
-            var handler = this.HighResolutionConfigured;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-        }
-
-        protected void OnLowResolution()
-        {
-            this.display.HighResolution = false;
-            this.display.AllocateMemory();
-
-            var handler = this.LowResolutionConfigured;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
         }
 
         protected void OnBeepStarting()
@@ -348,52 +387,42 @@
             {
                 var objects = new List<object>();
 
-                if (this.usedAddress)
+                if (this.UsedAddress)
                 {
                     objects.Add(address);
                 }
 
-                if (this.usedN)
+                if (this.UsedN)
                 {
                     objects.Add(n);
                 }
 
-                if (this.usedX)
+                if (this.UsedX)
                 {
                     objects.Add(x);
                 }
 
-                if (this.usedY)
+                if (this.UsedY)
                 {
                     objects.Add(y);
                 }
 
-                if (this.usedOperand)
+                if (this.UsedOperand)
                 {
                     objects.Add(operand);
                 }
 
                 var pre = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", programCounter, instruction);
-                var post = string.Format(CultureInfo.InvariantCulture, this.mnemomicFormat, objects.ToArray());
+                var post = string.Format(CultureInfo.InvariantCulture, this.MnemomicFormat, objects.ToArray());
 
                 handler(this, new DisassemblyEventArgs(pre + post));
             }
         }
 
-        private void WaitForKeyPress()
+        protected virtual void EmulateCycle()
         {
-            int key;
-            if (this.keyboard.CheckKeyPress(out key))
-            {
-                this.waitingForKeyPress = false;
-                this.v[this.waitingForKeyPressRegister] = (byte)key;
-            }
-        }
-
-        private void EmulateCycle()
-        {
-            var high = this.memory[this.pc];
-            var low = this.memory[this.pc + 1];
+            var high = this.Memory[this.PC];
+            var low = this.Memory[this.PC + 1];
             this.opcode = (ushort)((high << 8) + low);
             var nnn = (short)(this.opcode & 0xfff);
             var nn = low;
@@ -401,18 +430,21 @@
             var x = high & 0xf;
             var y = (low & 0xf0) >> 4;
 
-            if ((this.pc % 2) == 1)
+            if ((this.PC % 2) == 1)
             {
                 throw new InvalidOperationException("Instruction is not on an aligned address");
             }
 
-            var programCounter = this.pc;
-            this.pc += 2;
+            var programCounter = this.PC;
+            this.PC += 2;
 
             this.OnEmulatingCycle(programCounter, this.opcode, nnn, nn, n, x, y);
             try
             {
-                this.EmulateInstruction(nnn, nn, n, x, y);
+                if (!this.EmulateInstruction(nnn, nn, n, x, y))
+                {
+                    throw new IllegalInstructionException(this.opcode);
+                }
             }
             finally
             {
@@ -420,87 +452,78 @@
             }
         }
 
-        private void EmulateInstruction(short nnn, byte nn, int n, int x, int y)
+        protected virtual void Draw(int x, int y, int width, int height)
+        {
+            var hits = this.Display.Draw(this.Memory, this.i, this.V[x], this.V[y], width, height);
+            this.V[0xf] = (byte)hits;
+            this.DrawNeeded = true;
+        }
+
+        protected virtual bool EmulateInstruction(short nnn, byte nn, int n, int x, int y)
         {
             switch (this.opcode & 0xf000)
             {
                 case 0x0000:    // Call
-                    this.EmulateInstructions_0(nn, n, y);
-                    break;
+                    return this.EmulateInstructions_0(nn, n, y);
 
                 // Jump
                 case 0x1000:        // 1NNN     Flow        goto NNN;
-                    this.EmulateInstructions_1(nnn);
-                    break;
+                    return this.EmulateInstructions_1(nnn);
 
                 // Call
                 case 0x2000:        // 2NNN     Flow        *(0xNNN)()
-                    this.EmulateInstructions_2(nnn);
-                    break;
+                    return this.EmulateInstructions_2(nnn);
 
                 // Conditional
                 case 0x3000:        // 3XNN     Cond        if(Vx==NN)
-                    this.EmulateInstructions_3(nn, x);
-                    break;
+                    return this.EmulateInstructions_3(nn, x);
 
                 // Conditional
                 case 0x4000:        // 4XNN     Cond        if(Vx!=NN)
-                    this.EmulateInstructions_4(nn, x);
-                    break;
+                    return this.EmulateInstructions_4(nn, x);
 
                 // Conditional
                 case 0x5000:        // 5XNN     Cond        if(Vx==Vy)
-                    this.EmulateInstructions_5(x, y);
-                    break;
+                    return this.EmulateInstructions_5(x, y);
 
                 case 0x6000:        // 6XNN     Const       Vx = NN
-                    this.EmulateInstructions_6(nn, x);
-                    break;
+                    return this.EmulateInstructions_6(nn, x);
 
                 case 0x7000:        // 7XNN     Const       Vx += NN
-                    this.EmulateInstructions_7(nn, x);
-                    break;
+                    return this.EmulateInstructions_7(nn, x);
 
                 case 0x8000:
-                    this.EmulateInstructions_8(n, x, y);
-                    break;
+                    return this.EmulateInstructions_8(n, x, y);
 
                 case 0x9000:
-                    this.EmulateInstructions_9(n, x, y);
-                    break;
+                    return this.EmulateInstructions_9(n, x, y);
 
                 case 0xa000:        // ANNN     MEM         I = NNN
-                    this.EmulateInstructions_A(nnn);
-                    break;
+                    return this.EmulateInstructions_A(nnn);
 
                 case 0xB000:        // BNNN     Flow        PC=V0+NNN
-                    this.EmulateInstructions_B(nnn, x);
-                    break;
+                    return this.EmulateInstructions_B(nnn, x);
 
                 case 0xc000:        // CXNN     Rand        Vx=rand()&NN
-                    this.EmulateInstructions_C(nn, x);
-                    break;
+                    return this.EmulateInstructions_C(nn, x);
 
                 case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
-                    this.EmulateInstructions_D(n, x, y);
-                    break;
+                    return this.EmulateInstructions_D(n, x, y);
 
                 case 0xe000:
-                    this.EmulateInstructions_E(nn, x);
-                    break;
+                    return this.EmulateInstructions_E(nn, x);
 
                 case 0xf000:
-                    this.EmulateInstructions_F(nn, x);
-                    break;
+                    return this.EmulateInstructions_F(nn, x);
 
                 default:
-                    throw new IllegalInstructionException(this.opcode);
+                    return false;
             }
         }
 
-        private void EmulateInstructions_F(byte nn, int x)
+        protected virtual bool EmulateInstructions_F(byte nn, int x)
         {
-            this.usedX = true;
+            this.UsedX = true;
             switch (nn)
             {
                 case 0x07:  // FX07     Timer       Vx = get_delay()
@@ -527,10 +550,6 @@
                     this.LD_F_Vx(x);
                     break;
 
-                case 0x30:
-                    this.LD_HF_Vx(x);
-                    break;
-
                 case 0x33:  // FX33     BCD
                             //                      set_BCD(Vx);
                             //                      *(I+0)=BCD(3);
@@ -547,22 +566,16 @@
                     this.LD_Vx_II(x);
                     break;
 
-                case 0x75:
-                    this.LD_R_Vx(x);
-                    break;
-
-                case 0x85:
-                    this.LD_Vx_R(x);
-                    break;
-
                 default:
-                    throw new IllegalInstructionException(this.opcode);
+                    return false;
             }
+
+            return true;
         }
 
-        private void EmulateInstructions_E(byte nn, int x)
+        protected virtual bool EmulateInstructions_E(byte nn, int x)
         {
-            this.usedX = true;
+            this.UsedX = true;
             switch (nn)
             {
                 case 0x9E:  // EX9E     KeyOp       if(key()==Vx)
@@ -574,46 +587,43 @@
                     break;
 
                 default:
-                    throw new IllegalInstructionException(this.opcode);
+                    return false;
             }
+
+            return true;
         }
 
-        private void EmulateInstructions_D(int n, int x, int y)
+        protected virtual bool EmulateInstructions_D(int n, int x, int y)
         {
-            this.usedX = this.usedY = true;
-            switch (n)
-            {
-                case 0:
-                    this.XDRW(x, y);
-                    break;
-
-                default:
-                    this.DRW(x, y, n);
-                    break;
-            }
+            this.UsedX = this.UsedY = this.UsedN = true;
+            this.DRW(x, y, n);
+            return true;
         }
 
-        private void EmulateInstructions_C(byte nn, int x)
+        protected virtual bool EmulateInstructions_C(byte nn, int x)
         {
-            this.usedX = this.usedOperand = true;
+            this.UsedX = this.UsedOperand = true;
             this.RND(x, nn);
+            return true;
         }
 
-        private void EmulateInstructions_B(short nnn, int x)
+        protected virtual bool EmulateInstructions_B(short nnn, int x)
         {
-            this.usedAddress = true;
+            this.UsedAddress = true;
             this.JP_V0(x, nnn);
+            return true;
         }
 
-        private void EmulateInstructions_A(short nnn)
+        protected virtual bool EmulateInstructions_A(short nnn)
         {
-            this.usedAddress = true;
+            this.UsedAddress = true;
             this.LD_I(nnn);
+            return true;
         }
 
-        private void EmulateInstructions_9(int n, int x, int y)
+        protected virtual bool EmulateInstructions_9(int n, int x, int y)
         {
-            this.usedX = this.usedY = true;
+            this.UsedX = this.UsedY = true;
             switch (n)
             {
                 case 0:     // 9XY0     Cond        if(Vx!=Vy)
@@ -621,13 +631,15 @@
                     break;
 
                 default:
-                    throw new IllegalInstructionException(this.opcode);
+                    return false;
             }
+
+            return true;
         }
 
-        private void EmulateInstructions_8(int n, int x, int y)
+        protected virtual bool EmulateInstructions_8(int n, int x, int y)
         {
-            this.usedX = this.usedY = true;
+            this.UsedX = this.UsedY = true;
             switch (n)
             {
                 case 0x0:   // 8XY0     Assign      Vx=Vy
@@ -667,53 +679,62 @@
                     break;
 
                 default:
-                    throw new IllegalInstructionException(this.opcode);
+                    return false;
             }
+
+            return true;
         }
 
-        private void EmulateInstructions_7(byte nn, int x)
+        protected virtual bool EmulateInstructions_7(byte nn, int x)
         {
-            this.usedX = this.usedOperand = true;
+            this.UsedX = this.UsedOperand = true;
             this.ADD(x, nn);
+            return true;
         }
 
-        private void EmulateInstructions_6(byte nn, int x)
+        protected virtual bool EmulateInstructions_6(byte nn, int x)
         {
-            this.usedX = this.usedOperand = true;
+            this.UsedX = this.UsedOperand = true;
             this.LD(x, nn);
+            return true;
         }
 
-        private void EmulateInstructions_5(int x, int y)
+        protected virtual bool EmulateInstructions_5(int x, int y)
         {
-            this.usedX = this.usedY = true;
+            this.UsedX = this.UsedY = true;
             this.SE(x, y);
+            return true;
         }
 
-        private void EmulateInstructions_4(byte nn, int x)
+        protected virtual bool EmulateInstructions_4(byte nn, int x)
         {
-            this.usedOperand = this.usedX = true;
+            this.UsedOperand = this.UsedX = true;
             this.SNE(x, nn);
+            return true;
         }
 
-        private void EmulateInstructions_3(byte nn, int x)
+        protected virtual bool EmulateInstructions_3(byte nn, int x)
         {
-            this.usedOperand = this.usedX = true;
+            this.UsedOperand = this.UsedX = true;
             this.SE(x, nn);
+            return true;
         }
 
-        private void EmulateInstructions_2(short nnn)
+        protected virtual bool EmulateInstructions_2(short nnn)
         {
-            this.usedAddress = true;
+            this.UsedAddress = true;
             this.CALL(nnn);
+            return true;
         }
 
-        private void EmulateInstructions_1(short nnn)
+        protected virtual bool EmulateInstructions_1(short nnn)
         {
-            this.usedAddress = true;
+            this.UsedAddress = true;
             this.JP(nnn);
+            return true;
         }
 
-        private void EmulateInstructions_0(byte low, int n, int y)
+        protected virtual bool EmulateInstructions_0(byte low, int n, int y)
         {
             switch (low)
             {
@@ -721,513 +742,289 @@
                     this.CLS();
                     break;
 
-                case 0xfa:
-                    this.COMPATIBILITY();
-                    break;
-
-                case 0xfb:
-                    this.SCRIGHT();
-                    break;
-
-                case 0xfc:
-                    this.SCLEFT();
-                    break;
-
-                case 0xfd:
-                    this.EXIT();
-                    break;
-
-                case 0xfe:
-                    this.LOW();
-                    break;
-
-                case 0xff:
-                    this.HIGH();
-                    break;
-
                 case 0xee:  // 00EE     Flow        return;
                     this.RET();
                     break;
 
                 default:
-                    switch (y)
-                    {
-                        case 0xc:
-                            this.SCDOWN(n);
-                            break;
-
-                        default:
-                            throw new IllegalInstructionException(this.opcode, "RCA1802 Call");
-                    }
-
-                    break;
+                    return false;
             }
+
+            return true;
         }
 
         ////
 
-        // scdown n
-        // Scroll the screen down n pixels. [Super-Chip]
-        // This opcode delays until the start of a 60Hz clock cycle before drawing in low resolution mode.
-        // (Use the delay timer to pace your games in high resolution mode.)
-        // Code generated: 0x00Cn
-        private void SCDOWN(int n)
+        protected virtual void CLS()
         {
-            this.usedN = true;
-            this.mnemomicFormat = "SCDOWN\t{0:X1}";
-
-            this.VerifyRunningHp48();
-
-            var screenHeight = this.display.Height;
-
-            // Copy rows bottom to top
-            for (int y = screenHeight - n - 1; y >= 0; --y)
-            {
-                this.display.CopyRow(y, y + n);
-            }
-
-            // Remove the top columns, blanked by the scroll effect
-            for (int y = 0; y < n; ++y)
-            {
-                this.display.ClearRow(y);
-            }
-
+            this.MnemomicFormat = "CLS";
+            this.Display.Clear();
             this.DrawNeeded = true;
         }
 
-        // compatibility
-        // Mangle the "save" and "restore" opcodes to leave the I register unchanged.
-        // Warning: This opcode is not a standard Chip 8 opcode. It is provided soley to allow testing and
-        // porting of Chip 8 games which rely on this behaviour.
-        // Code generated: 0x00FA
-        private void COMPATIBILITY()
+        protected virtual void RET()
         {
-            this.mnemomicFormat = "COMPATIBILITY";
-            this.compatibility = true;
+            this.MnemomicFormat = "RET";
+            this.PC = (short)this.Stack[--this.SP & 0xF];
         }
 
-        // scright
-        // Scroll the screen right 4 pixels. [Super-Chip]
-        // This opcode delays until the start of a 60Hz clock cycle before drawing in low resolution mode.
-        // (Use the delay timer to pace your games in high resolution mode.)
-        // Code generated: 0x00FB
-        private void SCRIGHT()
+        protected virtual void JP(short nnn)
         {
-            this.mnemomicFormat = "SCRIGHT";
+            this.MnemomicFormat = "JP\t{0:X3}";
+            this.PC = nnn;
+        }
 
-            this.VerifyRunningHp48();
+        protected virtual void CALL(short nnn)
+        {
+            this.MnemomicFormat = "CALL\t{0:X3}";
+            this.Stack[this.SP++] = (ushort)this.PC;
+            this.PC = nnn;
+        }
 
-            var screenWidth = this.display.Width;
-
-            // Scroll distance
-            var n = 4;
-
-            // Copy colummns from right to left
-            for (int x = screenWidth - n - 1; x >= 0; --x)
+        protected virtual void SE(int x, byte nn)
+        {
+            this.MnemomicFormat = "SE\tV{0:X1},#{1:X2}";
+            if (this.V[x] == nn)
             {
-                this.display.CopyColumn(x, x + n);
-            }
-
-            // Remove the leftmost columns, blanked by the scroll effect
-            for (int x = 0; x < n; ++x)
-            {
-                this.display.ClearColumn(x);
-            }
-
-            this.DrawNeeded = true;
-        }
-
-        // scleft
-        // Scroll the screen left 4 pixels. [Super-Chip]
-        // This opcode delays until the start of a 60Hz clock cycle before drawing in low resolution mode.
-        // (Use the delay timer to pace your games in high resolution mode.)
-        // Code generated: 0x00FC
-        private void SCLEFT()
-        {
-            this.mnemomicFormat = "SCLEFT";
-
-            this.VerifyRunningHp48();
-
-            var screenWidth = this.display.Width;
-
-            // Scroll distance
-            var n = 4;
-
-            // Copy columns from left to right
-            for (int x = 0; x < screenWidth - n - 1; ++x)
-            {
-                this.display.CopyColumn(x + n, x);
-            }
-
-            // Remove the rightmost columns, blanked by the scroll effect
-            for (int x = screenWidth - n - 1; x < screenWidth; ++x)
-            {
-                this.display.ClearColumn(x);
-            }
-
-            this.DrawNeeded = true;
-        }
-
-        // low
-        // Low resolution (64×32) graphics mode (this is the default). [Super-Chip]
-        // Code generated: 0x00FE
-        private void LOW()
-        {
-            this.mnemomicFormat = "LOW";
-            this.VerifyRunningHp48();
-            this.OnLowResolution();
-        }
-
-        // high
-        // High resolution (128×64) graphics mode. [Super-Chip]
-        // Code generated: 0x00FF
-        private void HIGH()
-        {
-            this.mnemomicFormat = "HIGH";
-            this.VerifyRunningHp48();
-            this.OnHighResolution();
-        }
-
-        // flags.save vX
-        // Store the values of registers v0 to vX into the "flags" registers (this means something in the
-        // HP48 implementation). (X < 8) [Super-Chip]
-        // Code generated: 0xFX75
-        private void LD_R_Vx(int x)
-        {
-            this.mnemomicFormat = "LD\tR,V{0:X1}";
-            this.VerifyRunningHp48();
-            Array.Copy(this.v, this.r, x + 1);
-        }
-
-        // flags.restore vX
-        // Read the values of registers v0 to vX from the "flags" registers (this means something in the
-        // HP48 implementation). (X < 8) [Super-Chip]
-        // Code generated: 0xFX85
-        private void LD_Vx_R(int x)
-        {
-            this.mnemomicFormat = "LD\tV{0:X1},R";
-            this.VerifyRunningHp48();
-            Array.Copy(this.r, this.v, x + 1);
-        }
-
-        // exit
-        // This opcode is used to terminate the chip8run program. It causes the chip8run program to exit
-        // with a successful exit status. [Super-Chip]
-        // Code generated: 0x00FD.
-        private void EXIT()
-        {
-            this.mnemomicFormat = "EXIT";
-            this.VerifyRunningHp48();
-            this.Finished = true;
-        }
-
-        ////
-
-        private void CLS()
-        {
-            this.mnemomicFormat = "CLS";
-            this.display.Clear();
-            this.DrawNeeded = true;
-        }
-
-        private void RET()
-        {
-            this.mnemomicFormat = "RET";
-            this.pc = (short)this.stack[--this.sp & 0xF];
-        }
-
-        private void JP(short nnn)
-        {
-            this.mnemomicFormat = "JP\t{0:X3}";
-            this.pc = nnn;
-        }
-
-        private void CALL(short nnn)
-        {
-            this.mnemomicFormat = "CALL\t{0:X3}";
-            this.stack[this.sp++] = (ushort)this.pc;
-            this.pc = nnn;
-        }
-
-        private void SE(int x, byte nn)
-        {
-            this.mnemomicFormat = "SE\tV{0:X1},#{1:X2}";
-            if (this.v[x] == nn)
-            {
-                this.pc += 2;
+                this.PC += 2;
             }
         }
 
-        private void SNE(int x, byte nn)
+        protected virtual void SNE(int x, byte nn)
         {
-            this.mnemomicFormat = "SNE\tV{0:X1},#{1:X2}";
-            if (this.v[x] != nn)
+            this.MnemomicFormat = "SNE\tV{0:X1},#{1:X2}";
+            if (this.V[x] != nn)
             {
-                this.pc += 2;
+                this.PC += 2;
             }
         }
 
-        private void SE(int x, int y)
+        protected virtual void SE(int x, int y)
         {
-            this.mnemomicFormat = "SE\tV{0:X1},V{1:X1}";
-            if (this.v[x] == this.v[y])
+            this.MnemomicFormat = "SE\tV{0:X1},V{1:X1}";
+            if (this.V[x] == this.V[y])
             {
-                this.pc += 2;
+                this.PC += 2;
             }
         }
 
-        private void LD(int x, byte nn)
+        protected virtual void LD(int x, byte nn)
         {
-            this.mnemomicFormat = "LD\tV{0:X1},#{1:X2}";
-            this.v[x] = nn;
+            this.MnemomicFormat = "LD\tV{0:X1},#{1:X2}";
+            this.V[x] = nn;
         }
 
-        private void ADD(int x, byte nn)
+        protected virtual void ADD(int x, byte nn)
         {
-            this.mnemomicFormat = "ADD\tV{0:X1},#{1:X2}";
-            this.v[x] += nn;
+            this.MnemomicFormat = "ADD\tV{0:X1},#{1:X2}";
+            this.V[x] += nn;
         }
 
-        private void LD(int x, int y)
+        protected virtual void LD(int x, int y)
         {
-            this.mnemomicFormat = "LD\tV{0:X1},V{1:X1}";
-            this.v[x] = this.v[y];
+            this.MnemomicFormat = "LD\tV{0:X1},V{1:X1}";
+            this.V[x] = this.V[y];
         }
 
-        private void OR(int x, int y)
+        protected virtual void OR(int x, int y)
         {
-            this.mnemomicFormat = "OR\tV{0:X1},V{1:X1}";
-            this.v[x] |= this.v[y];
+            this.MnemomicFormat = "OR\tV{0:X1},V{1:X1}";
+            this.V[x] |= this.V[y];
         }
 
-        private void AND(int x, int y)
+        protected virtual void AND(int x, int y)
         {
-            this.mnemomicFormat = "AND\tV{0:X1},V{1:X1}";
-            this.v[x] &= this.v[y];
+            this.MnemomicFormat = "AND\tV{0:X1},V{1:X1}";
+            this.V[x] &= this.V[y];
         }
 
-        private void XOR(int x, int y)
+        protected virtual void XOR(int x, int y)
         {
-            this.mnemomicFormat = "XOR\tV{0:X1},V{1:X1}";
-            this.v[x] ^= this.v[y];
+            this.MnemomicFormat = "XOR\tV{0:X1},V{1:X1}";
+            this.V[x] ^= this.V[y];
         }
 
-        private void ADD(int x, int y)
+        protected virtual void ADD(int x, int y)
         {
-            this.mnemomicFormat = "ADD\tV{0:X1},V{1:X1}";
-            this.v[0xf] = (byte)(this.v[y] > (0xff - this.v[x]) ? 1 : 0);
-            this.v[x] += this.v[y];
+            this.MnemomicFormat = "ADD\tV{0:X1},V{1:X1}";
+            this.V[0xf] = (byte)(this.V[y] > (0xff - this.V[x]) ? 1 : 0);
+            this.V[x] += this.V[y];
         }
 
-        private void SUB(int x, int y)
+        protected virtual void SUB(int x, int y)
         {
-            this.mnemomicFormat = "SUB\tV{0:X1},V{1:X1}";
-            this.v[0xf] = (byte)(this.v[x] >= this.v[y] ? 1 : 0);
-            this.v[x] -= this.v[y];
+            this.MnemomicFormat = "SUB\tV{0:X1},V{1:X1}";
+            this.V[0xf] = (byte)(this.V[x] >= this.V[y] ? 1 : 0);
+            this.V[x] -= this.V[y];
         }
 
-        private void SHR(int x, int y)
+        protected virtual void SHR(int x, int y)
         {
             // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
             // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
-            if (this.emulating == EmulationType.ComsmacVip)
-            {
-                this.mnemomicFormat = "SHR\tV{0:X1},V{0:X1}";
-                this.v[y] >>= 1;
-                this.v[x] = this.v[y];
-            }
-            else
-            {
-                this.mnemomicFormat = "SHR\tV{0:X1}";
-                this.usedY = false;
-                this.v[x] >>= 1;
-            }
-
-            this.v[0xf] = (byte)(this.v[x] & 0x1);
+            this.MnemomicFormat = "SHR\tV{0:X1},V{0:X1}";
+            this.V[y] >>= 1;
+            this.V[x] = this.V[y];
+            this.V[0xf] = (byte)(this.V[x] & 0x1);
         }
 
-        private void SUBN(int x, int y)
+        protected virtual void SUBN(int x, int y)
         {
-            this.mnemomicFormat = "SUBN\tV{0:X1},V{1:X1}";
-            this.v[0xf] = (byte)(this.v[x] > this.v[y] ? 0 : 1);
-            this.v[x] = (byte)(this.v[y] - this.v[x]);
+            this.MnemomicFormat = "SUBN\tV{0:X1},V{1:X1}";
+            this.V[0xf] = (byte)(this.V[x] > this.V[y] ? 0 : 1);
+            this.V[x] = (byte)(this.V[y] - this.V[x]);
         }
 
-        private void SHL(int x, int y)
+        protected virtual void SHL(int x, int y)
         {
-            this.v[0xf] = (byte)((this.v[x] & 0x80) == 0 ? 0 : 1);
-
             // https://github.com/Chromatophore/HP48-Superchip#8xy6--8xye
             // Bit shifts X register by 1, VIP: shifts Y by one and places in X, HP48-SC: ignores Y field, shifts X
-            if (this.emulating == EmulationType.ComsmacVip)
-            {
-                this.mnemomicFormat = "SHL\tV{0:X1},V{1:X1}";
-                this.v[y] <<= 1;
-                this.v[x] = this.v[y];
-            }
-            else
-            {
-                this.mnemomicFormat = "SHL\tV{0:X1}";
-                this.usedY = false;
-                this.v[x] <<= 1;
-            }
+            this.MnemomicFormat = "SHL\tV{0:X1},V{1:X1}";
+            this.V[0xf] = (byte)((this.V[x] & 0x80) == 0 ? 0 : 1);
+            this.V[y] <<= 1;
+            this.V[x] = this.V[y];
         }
 
-        private void SNE(int x, int y)
+        protected virtual void SNE(int x, int y)
         {
-            this.mnemomicFormat = "SNE\tV{0:X1},V{1:X1}";
-            if (this.v[x] != this.v[y])
+            this.MnemomicFormat = "SNE\tV{0:X1},V{1:X1}";
+            if (this.V[x] != this.V[y])
             {
-                this.pc += 2;
+                this.PC += 2;
             }
         }
 
-        private void LD_I(short nnn)
+        protected virtual void LD_I(short nnn)
         {
-            this.mnemomicFormat = "LD\tI,#{0:X3}";
-            this.i = nnn;
+            this.MnemomicFormat = "LD\tI,#{0:X3}";
+            this.I = nnn;
         }
 
-        private void JP_V0(int x, short nnn)
+        protected virtual void JP_V0(int x, short nnn)
         {
-            this.mnemomicFormat = "JP\t[V0],#{0:X3}";
+            this.MnemomicFormat = "JP\t[V0],#{0:X3}";
 
             // https://github.com/Chromatophore/HP48-Superchip#bnnn
             // Sets PC to address NNN + v0 -
             //  VIP: correctly jumps based on v0
             //  HP48 -SC: reads highest nibble of address to select
             //      register to apply to address (high nibble pulls double duty)
-            var register = this.emulating == EmulationType.HP48 ? x : 0;
-            this.pc = (short)(this.v[register] + nnn);
+            this.PC = (short)(this.V[0] + nnn);
         }
 
-        private void RND(int x, byte nn)
+        protected virtual void RND(int x, byte nn)
         {
-            this.mnemomicFormat = "RND\tV{0:X1},#{1:X2}";
-            this.v[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
+            this.MnemomicFormat = "RND\tV{0:X1},#{1:X2}";
+            this.V[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
         }
 
-        private void XDRW(int x, int y)
+        protected virtual void DRW(int x, int y, int n)
         {
-            this.mnemomicFormat = "XDRW V{0:X1},V{1:X1}";
-            this.VerifyRunningHp48();
-            this.Draw(x, y, 16, 16);
-        }
-
-        private void DRW(int x, int y, int n)
-        {
-            this.mnemomicFormat = "DRW\tV{0:X1},V{1:X1},#{2:X1}";
-            this.usedN = true;
+            this.MnemomicFormat = "DRW\tV{0:X1},V{1:X1},#{2:X1}";
+            this.UsedN = true;
             this.Draw(x, y, 8, n);
         }
 
-        private void SKP(int x)
+        protected virtual void SKP(int x)
         {
-            this.mnemomicFormat = "SKP\tV{0:X1}";
-            if (this.keyboard.IsKeyPressed(this.v[x]))
+            this.MnemomicFormat = "SKP\tV{0:X1}";
+            if (this.keyboard.IsKeyPressed(this.V[x]))
             {
-                this.pc += 2;
+                this.PC += 2;
             }
         }
 
-        private void SKNP(int x)
+        protected virtual void SKNP(int x)
         {
-            this.mnemomicFormat = "SKNP\tV{0:X1}";
-            if (!this.keyboard.IsKeyPressed(this.v[x]))
+            this.MnemomicFormat = "SKNP\tV{0:X1}";
+            if (!this.keyboard.IsKeyPressed(this.V[x]))
             {
-                this.pc += 2;
+                this.PC += 2;
             }
         }
 
-        private void LD_Vx_II(int x)
+        protected virtual void LD_Vx_II(int x)
         {
-            this.mnemomicFormat = "LD\tV{0:X1},[I]";
-
-            Array.Copy(this.memory, this.i, this.v, 0, x + 1);
-
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
-            if (this.compatibility || (this.emulating == EmulationType.ComsmacVip))
-            {
-                this.i += (short)(x + 1);
-            }
+            this.MnemomicFormat = "LD\tV{0:X1},[I]";
+            Array.Copy(this.Memory, this.I, this.V, 0, x + 1);
+            this.I += (short)(x + 1);
         }
 
-        private void LD_II_Vx(int x)
+        protected virtual void LD_II_Vx(int x)
         {
-            this.mnemomicFormat = "LD\t[I],V{0:X1}";
-
-            Array.Copy(this.v, 0, this.memory, this.i, x + 1);
-
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
-            if (this.compatibility || (this.emulating == EmulationType.ComsmacVip))
-            {
-                this.i += (short)(x + 1);
-            }
+            this.MnemomicFormat = "LD\t[I],V{0:X1}";
+            Array.Copy(this.V, 0, this.Memory, this.I, x + 1);
+            this.I += (short)(x + 1);
         }
 
-        private void LD_B_Vx(int x)
+        protected virtual void LD_B_Vx(int x)
         {
-            this.mnemomicFormat = "LD\tB,V{0:X1}";
-
-            var content = this.v[x];
-            this.memory[this.i] = (byte)(content / 100);
-            this.memory[this.i + 1] = (byte)((content / 10) % 10);
-            this.memory[this.i + 2] = (byte)((content % 100) % 10);
+            this.MnemomicFormat = "LD\tB,V{0:X1}";
+            var content = this.V[x];
+            this.memory[this.I] = (byte)(content / 100);
+            this.memory[this.I + 1] = (byte)((content / 10) % 10);
+            this.memory[this.I + 2] = (byte)((content % 100) % 10);
         }
 
-        private void LD_F_Vx(int x)
+        protected virtual void LD_F_Vx(int x)
         {
-            this.mnemomicFormat = "LD\tF,V{0:X1}";
-            this.i = (short)(StandardFontOffset + (5 * this.v[x]));
+            this.MnemomicFormat = "LD\tF,V{0:X1}";
+            this.I = (short)(StandardFontOffset + (5 * this.V[x]));
         }
 
-        private void LD_HF_Vx(int x)
+        protected virtual void ADD_I_Vx(int x)
         {
-            this.mnemomicFormat = "LD\tHF,V{0:X1}";
-            this.i = (short)(HighFontOffset + (10 * this.v[x]));
-        }
-
-        private void ADD_I_Vx(int x)
-        {
-            this.mnemomicFormat = "ADD\tI,V{0:X1}";
+            this.MnemomicFormat = "ADD\tI,V{0:X1}";
 
             // From wikipedia entry on CHIP-8:
             // VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0
             // when there isn't. This is an undocumented feature of the CHIP-8 and used by the Spacefight 2091! game
-            var sum = this.i + this.v[x];
-            this.v[0xf] = (byte)(sum > 0xfff ? 1 : 0);
+            var sum = this.I + this.V[x];
+            this.V[0xf] = (byte)(sum > 0xfff ? 1 : 0);
 
-            this.i += this.v[x];
+            this.I += this.V[x];
         }
 
-        private void LD_ST_Vx(int x)
+        protected virtual void LD_ST_Vx(int x)
         {
-            this.mnemomicFormat = "LD\tST,V{0:X1}";
-            this.soundTimer = this.v[x];
+            this.MnemomicFormat = "LD\tST,V{0:X1}";
+            this.soundTimer = this.V[x];
         }
 
-        private void LD_DT_Vx(int x)
+        protected virtual void LD_DT_Vx(int x)
         {
-            this.mnemomicFormat = "LD\tDT,V{0:X1}";
-            this.delayTimer = this.v[x];
+            this.MnemomicFormat = "LD\tDT,V{0:X1}";
+            this.delayTimer = this.V[x];
         }
 
-        private void LD_Vx_K(int x)
+        protected virtual void LD_Vx_K(int x)
         {
-            this.mnemomicFormat = "LD\tV{0:X1},K";
+            this.MnemomicFormat = "LD\tV{0:X1},K";
             this.waitingForKeyPress = true;
             this.waitingForKeyPressRegister = x;
         }
 
-        private void LD_Vx_DT(int x)
+        protected virtual void LD_Vx_DT(int x)
         {
-            this.mnemomicFormat = "LD\tV{0:X1},DT";
-            this.v[x] = this.delayTimer;
+            this.MnemomicFormat = "LD\tV{0:X1},DT";
+            this.V[x] = this.delayTimer;
         }
 
         ////
+
+        private void WaitForKeyPress()
+        {
+            int key;
+            if (this.keyboard.CheckKeyPress(out key))
+            {
+                this.waitingForKeyPress = false;
+                this.V[this.waitingForKeyPressRegister] = (byte)key;
+            }
+        }
 
         private void UpdateDelayTimer()
         {
@@ -1277,22 +1074,7 @@
                     headerLength = 13;
                 }
 
-                Array.Copy(bytes, headerLength, this.memory, offset, size - headerLength);
-            }
-        }
-
-        private void Draw(int x, int y, int width, int height)
-        {
-            var hits = this.display.Draw(this.memory, this.i, this.v[x], this.v[y], width, height);
-            this.v[0xf] = (byte)hits;
-            this.drawNeeded = true;
-        }
-
-        private void VerifyRunningHp48()
-        {
-            if (this.emulating < EmulationType.HP48)
-            {
-                throw new IllegalInstructionException(this.opcode, "Illegal when not running in HP-48 mode");
+                Array.Copy(bytes, headerLength, this.Memory, offset, size - headerLength);
             }
         }
     }

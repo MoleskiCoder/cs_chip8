@@ -60,6 +60,13 @@
             }
         }
 
+        public void Initialise()
+        {
+            this.HighResolution = false;
+            this.AllocateMemory();
+            this.Clear();
+        }
+
         public int Draw(byte[] memory, int address, int drawX, int drawY, int width, int height)
         {
             if (memory == null)

@@ -10,8 +10,8 @@
         private bool cycle = false;
         private bool framed = false;
 
-        public Debugger(EmulationType machineType, string game)
-        : base(machineType, game)
+        public Debugger(Chip8 processor, string game)
+        : base(processor, game)
         {
         }
 
@@ -152,7 +152,7 @@
 
         private void RunNormalFrame()
         {
-            for (int i = 0; !this.stepping && (i < this.CyclesPerFrame); ++i)
+            for (int i = 0; !this.stepping && (i < this.Processor.CyclesPerFrame); ++i)
             {
                 this.stepping = this.CheckBreakpoint(this.Processor.PC);
                 if (!this.stepping)

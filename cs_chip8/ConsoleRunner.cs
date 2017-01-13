@@ -1,15 +1,16 @@
 ﻿namespace Emulator
 {
     using System;
+    using Processor;
 
     internal class ConsoleRunner : IDisposable
     {
         private readonly Processor.Controller controller;
         private bool disposed = false;
 
-        public ConsoleRunner(Processor.EmulationType machine, string game)
+        public ConsoleRunner(Chip8 processor, string game)
         {
-            this.controller = new Processor.Controller(machine, game);
+            this.controller = new Processor.Controller(processor, game);
         }
 
         public void Run()
