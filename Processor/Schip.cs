@@ -359,15 +359,15 @@
             var n = 4;
 
             // Copy columns from left to right
-            for (int x = 0; x < screenWidth - n - 1; ++x)
+            for (int x = 0; x < (screenWidth - n); ++x)
             {
                 this.Display.CopyColumn(x + n, x);
             }
 
             // Remove the rightmost columns, blanked by the scroll effect
-            for (int x = screenWidth - n - 1; x < screenWidth; ++x)
+            for (int x = 0; x < n; ++x)
             {
-                this.Display.ClearColumn(x);
+                this.Display.ClearColumn(screenWidth - x - 1);
             }
 
             this.DrawNeeded = true;
