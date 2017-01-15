@@ -2,7 +2,17 @@
 {
     public interface IGraphicsDevice
     {
-        bool[] Graphics
+        bool[][] Graphics
+        {
+            get;
+        }
+
+        int NumberOfPlanes
+        {
+            get;
+        }
+
+        int NumberOfColours
         {
             get;
         }

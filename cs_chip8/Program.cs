@@ -6,8 +6,8 @@
     {
         public static void Main()
         {
-            ////var processor = new Chip8(new MonoGameKeyboard(), new BitmappedGraphics());
-            var processor = new Schip(new MonoGameKeyboard(), new BitmappedGraphics());
+            ////var processor = new Chip8(new MonoGameKeyboard(), new BitmappedGraphics(1));
+            var processor = new Schip(new MonoGameKeyboard(), new BitmappedGraphics(1));
 
             ////var game = @"GAMES\PONG.ch8";
 

@@ -18,13 +18,12 @@
         private readonly GraphicsDeviceManager graphics;
         private readonly SoundPlayer soundPlayer = new SoundPlayer();
 
-        private readonly Color backgroundColour = Color.Black;
-        private readonly Color foregroundColour = Color.White;
+        private readonly Color[] colours;
+        private readonly Texture2D[] pixels;
 
         private readonly Chip8 processor;
 
         private SpriteBatch spriteBatch;
-        private Texture2D pixel;
 
         private bool wasToggleKeyPressed;
 
@@ -36,6 +35,11 @@
             this.game = game;
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
+
+            this.colours = new Color[this.processor.Display.NumberOfColours];
+
+            // One less than the number of colours, since we don't bother holding a background pixel.
+            this.pixels = new Texture2D[this.processor.Display.NumberOfColours - 1];
         }
 
         public Chip8 Processor
@@ -76,9 +80,12 @@
                         this.graphics.Dispose();
                     }
 
-                    if (this.pixel != null)
+                    if (this.pixels != null)
                     {
-                        this.pixel.Dispose();
+                        foreach (var pixel in this.pixels)
+                        {
+                            pixel.Dispose();
+                        }
                     }
 
                     if (this.spriteBatch != null)
@@ -97,8 +104,30 @@
 
             this.spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            this.pixel = new Texture2D(GraphicsDevice, 1, 1);
-            this.pixel.SetData<Color>(new Color[] { this.foregroundColour });
+            switch (this.processor.Display.NumberOfPlanes)
+            {
+                case 1:
+                    this.colours[0] = Color.Black;
+                    this.colours[1] = Color.White;
+                    break;
+
+                case 2:
+                    this.colours[0] = Color.Black;
+                    this.colours[1] = Color.Red;
+                    this.colours[2] = Color.Yellow;
+                    this.colours[3] = Color.White;
+                    break;
+
+                default:
+                    throw new InvalidOperationException("Undefined number of graphics bit planes in use.");
+
+            }
+
+            for (int i = 1; i < this.processor.Display.NumberOfColours; ++i)
+            {
+                this.pixels[i - 1] = new Texture2D(GraphicsDevice, 1, 1);
+                this.pixels[i - 1].SetData<Color>(new Color[] { this.colours[i] });
+            }
 
             this.SetLowResolution();
 
@@ -131,7 +160,7 @@
             {
                 try
                 {
-                    this.graphics.GraphicsDevice.Clear(this.backgroundColour);
+                    this.graphics.GraphicsDevice.Clear(this.colours[0]);
                     this.Draw();
                 }
                 finally
@@ -183,10 +212,19 @@
                     var rectanglePositionY = y * pixelSize;
                     for (int x = 0; x < screenWidth; x++)
                     {
-                        if (source[x + rowOffset])
+                        int colourIndex = 0;
+                        for (int plane = 0; plane < this.processor.Display.NumberOfPlanes; ++plane)
                         {
+                            var bit = source[plane][x + rowOffset];
+                            colourIndex |= Convert.ToByte(bit) << plane;
+                        }
+
+                        if (colourIndex != 0)
+                        {
+                            var colour = this.colours[colourIndex];
+                            var pixel = this.pixels[colourIndex - 1];
                             var rectanglePositionX = x * pixelSize;
-                            this.spriteBatch.Draw(this.pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), this.foregroundColour);
+                            this.spriteBatch.Draw(pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), colour);
                         }
                     }
                 }

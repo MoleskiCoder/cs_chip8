@@ -5,17 +5,44 @@
 
     public class BitmappedGraphics : IGraphicsDevice
     {
+        public const int DefaultPlane = 0x1;
+
         public const int ScreenWidthLow = 64;
         public const int ScreenHeightLow = 32;
 
         public const int ScreenWidthHigh = 128;
         public const int ScreenHeightHigh = 64;
 
-        private bool[] graphics;
+        private readonly int numberOfPlanes;
+
+        private readonly bool[][] graphics;
+        private int planeMask = DefaultPlane;
 
         private bool highResolution = false;
 
-        public bool[] Graphics
+        public BitmappedGraphics(int numberOfPlanes)
+        {
+            this.numberOfPlanes = numberOfPlanes;
+            this.graphics = new bool[this.numberOfPlanes][];
+        }
+
+        public int NumberOfPlanes
+        {
+            get
+            {
+                return this.numberOfPlanes;
+            }
+        }
+
+        public int NumberOfColours
+        {
+            get
+            {
+                return 1 << this.numberOfPlanes;
+            }
+        }
+
+        public bool[][] Graphics
         {
             get
             {
@@ -60,6 +87,19 @@
             }
         }
 
+        private int PlaneMask
+        {
+            get
+            {
+                return this.planeMask;
+            }
+
+            set
+            {
+                this.planeMask = value;
+            }
+        }
+
         public void Initialise()
         {
             this.HighResolution = false;
@@ -67,7 +107,86 @@
             this.Clear();
         }
 
+        public void AllocateMemory()
+        {
+            for (int i = 0; i < this.NumberOfPlanes; ++i)
+            {
+                this.AllocateMemory(i);
+            }
+        }
+
         public int Draw(byte[] memory, int address, int drawX, int drawY, int width, int height)
+        {
+            var bytesPerRow = width / 8;
+
+            var hits = 0;
+            for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
+            {
+                hits += this.MaybeDraw(plane, memory, address, drawX, drawY, width, height);
+                address += (height * bytesPerRow);
+            }
+
+            return hits;
+        }
+
+        public void ClearRow(int row)
+        {
+            for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
+            {
+                this.MaybeClearRow(plane, row);
+            }
+        }
+
+        public void ClearColumn(int column)
+        {
+            for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
+            {
+                this.MaybeClearColumn(plane, column);
+            }
+        }
+
+        public void CopyRow(int source, int destination)
+        {
+            for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
+            {
+                this.MaybeCopyRow(plane, source, destination);
+            }
+        }
+
+        public void CopyColumn(int source, int destination)
+        {
+            for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
+            {
+                this.MaybeCopyColumn(plane, source, destination);
+            }
+        }
+
+        public void Clear()
+        {
+            for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
+            {
+                MaybeClear(plane);
+            }
+        }
+
+        private bool IsPlaneSelected(int plane)
+        {
+            var mask = (1 << plane);
+            var selected = (this.PlaneMask & mask) != 0;
+            return selected;
+        }
+
+        private int MaybeDraw(int plane, byte[] memory, int address, int drawX, int drawY, int width, int height)
+        {
+            if (this.IsPlaneSelected(plane))
+            {
+                return this.Draw(plane, memory, address, drawX, drawY, width, height);
+            }
+
+            return 0;
+        }
+
+        private int Draw(int plane, byte[] memory, int address, int drawX, int drawY, int width, int height)
         {
             if (memory == null)
             {
@@ -103,12 +222,12 @@
                         if ((cellX < screenWidth) && (cellY < screenHeight))
                         {
                             var cell = cellX + cellRowOffset;
-                            if (this.graphics[cell])
+                            if (this.graphics[plane][cell])
                             {
                                 rowHits[row]++;
                             }
 
-                            this.graphics[cell] ^= true;
+                            this.graphics[plane][cell] ^= true;
                         }
                         else
                         {
@@ -128,10 +247,10 @@
             return (from rowHit in rowHits where rowHit > 0 select rowHit).Count();
         }
 
-        public void AllocateMemory()
+        private void AllocateMemory(int plane)
         {
-            var previous = this.graphics;
-            this.graphics = new bool[this.Width * this.Height];
+            var previous = this.graphics[plane];
+            this.graphics[plane] = new bool[this.Width * this.Height];
 
             // https://github.com/Chromatophore/HP48-Superchip#swapping-display-modes
             // Superchip has two different display modes, 64x32 and 128x64. When swapped between,
@@ -139,45 +258,85 @@
             // columns, so odd patterns can be created.
             if (previous != null)
             {
-                Array.Copy(previous, 0, this.graphics, 0, Math.Min(previous.Length, this.graphics.Length));
+                Array.Copy(previous, 0, this.graphics[plane], 0, Math.Min(previous.Length, this.graphics[plane].Length));
             }
         }
 
-        public void ClearRow(int row)
+        private void MaybeClearRow(int plane, int row)
         {
-            var width = this.Width;
-            Array.Clear(this.graphics, row * width, width);
+            if (this.IsPlaneSelected(plane))
+            {
+                this.ClearRow(plane, row);
+            }
         }
 
-        public void ClearColumn(int column)
+        private void ClearRow(int plane, int row)
+        {
+            var width = this.Width;
+            Array.Clear(this.graphics[plane], row * width, width);
+        }
+
+        private void MaybeClearColumn(int plane, int column)
+        {
+            if (this.IsPlaneSelected(plane))
+            {
+                this.ClearColumn(plane, column);
+            }
+        }
+
+        private void ClearColumn(int plane, int column)
         {
             var width = this.Width;
             var height = this.Height;
             for (int y = 0; y < height; ++y)
             {
-                this.graphics[column + (y * width)] = false;
+                this.graphics[plane][column + (y * width)] = false;
             }
         }
 
-        public void CopyRow(int source, int destination)
+        private void MaybeCopyRow(int plane, int source, int destination)
         {
-            var width = this.Width;
-            Array.Copy(this.graphics, source * width, this.graphics, destination * width, width);
+            if (this.IsPlaneSelected(plane))
+            {
+                this.CopyRow(plane, source, destination);
+            }
         }
 
-        public void CopyColumn(int source, int destination)
+        private void CopyRow(int plane, int source, int destination)
+        {
+            var width = this.Width;
+            Array.Copy(this.graphics[plane], source * width, this.graphics[plane], destination * width, width);
+        }
+
+        private void MaybeCopyColumn(int plane, int source, int destination)
+        {
+            if (this.IsPlaneSelected(plane))
+            {
+                this.CopyColumn(plane, source, destination);
+            }
+        }
+
+        private void CopyColumn(int plane, int source, int destination)
         {
             var width = this.Width;
             var height = this.Height;
             for (int y = 0; y < height; ++y)
             {
-                this.graphics[destination + (y * width)] = this.graphics[source + (y * width)];
+                this.graphics[plane][destination + (y * width)] = this.graphics[plane][source + (y * width)];
             }
         }
 
-        public void Clear()
+        private void MaybeClear(int plane)
         {
-            Array.Clear(this.graphics, 0, this.Width * this.Height);
+            if (this.IsPlaneSelected(plane))
+            {
+                Clear(plane);
+            }
+        }
+
+        private void Clear(int plane)
+        {
+            Array.Clear(this.graphics[plane], 0, this.Width * this.Height);
         }
     }
 }
