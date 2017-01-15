@@ -120,7 +120,6 @@
 
                 default:
                     throw new InvalidOperationException("Undefined number of graphics bit planes in use.");
-
             }
 
             for (int i = 1; i < this.processor.Display.NumberOfColours; ++i)

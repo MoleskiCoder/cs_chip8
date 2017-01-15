@@ -123,7 +123,7 @@
             for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
             {
                 hits += this.MaybeDraw(plane, memory, address, drawX, drawY, width, height);
-                address += (height * bytesPerRow);
+                address += height * bytesPerRow;
             }
 
             return hits;
@@ -165,13 +165,13 @@
         {
             for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
             {
-                MaybeClear(plane);
+                this.MaybeClear(plane);
             }
         }
 
         private bool IsPlaneSelected(int plane)
         {
-            var mask = (1 << plane);
+            var mask = 1 << plane;
             var selected = (this.PlaneMask & mask) != 0;
             return selected;
         }
@@ -330,7 +330,7 @@
         {
             if (this.IsPlaneSelected(plane))
             {
-                Clear(plane);
+                this.Clear(plane);
             }
         }
 
