@@ -18,8 +18,7 @@
         private readonly GraphicsDeviceManager graphics;
         private readonly SoundPlayer soundPlayer = new SoundPlayer();
 
-        private readonly Color[] colours;
-        private readonly Texture2D[] pixels;
+        private readonly MonoGameColourPalette palette;
 
         private readonly Chip8 processor;
 
@@ -35,11 +34,7 @@
             this.game = game;
             this.graphics = new GraphicsDeviceManager(this);
             this.graphics.IsFullScreen = false;
-
-            this.colours = new Color[this.processor.Display.NumberOfColours];
-
-            // One less than the number of colours, since we don't bother holding a background pixel.
-            this.pixels = new Texture2D[this.processor.Display.NumberOfColours - 1];
+            this.palette = new MonoGameColourPalette(this.processor.Display);
         }
 
         public Chip8 Processor
@@ -80,12 +75,9 @@
                         this.graphics.Dispose();
                     }
 
-                    if (this.pixels != null)
+                    if (this.palette != null)
                     {
-                        foreach (var pixel in this.pixels)
-                        {
-                            pixel.Dispose();
-                        }
+                        this.palette.Dispose();
                     }
 
                     if (this.spriteBatch != null)
@@ -102,31 +94,9 @@
         {
             this.soundPlayer.SoundLocation = @"..\..\..\Sounds\beep.wav";
 
-            this.spriteBatch = new SpriteBatch(GraphicsDevice);
+            this.spriteBatch = new SpriteBatch(this.GraphicsDevice);
 
-            switch (this.processor.Display.NumberOfPlanes)
-            {
-                case 1:
-                    this.colours[0] = Color.Black;
-                    this.colours[1] = Color.White;
-                    break;
-
-                case 2:
-                    this.colours[0] = Color.Black;
-                    this.colours[1] = Color.Red;
-                    this.colours[2] = Color.Yellow;
-                    this.colours[3] = Color.White;
-                    break;
-
-                default:
-                    throw new InvalidOperationException("Undefined number of graphics bit planes in use.");
-            }
-
-            for (int i = 1; i < this.processor.Display.NumberOfColours; ++i)
-            {
-                this.pixels[i - 1] = new Texture2D(GraphicsDevice, 1, 1);
-                this.pixels[i - 1].SetData<Color>(new Color[] { this.colours[i] });
-            }
+            this.palette.Load(this.GraphicsDevice);
 
             this.SetLowResolution();
 
@@ -159,7 +129,7 @@
             {
                 try
                 {
-                    this.graphics.GraphicsDevice.Clear(this.colours[0]);
+                    this.graphics.GraphicsDevice.Clear(this.palette.Colours[0]);
                     this.Draw();
                 }
                 finally
@@ -220,8 +190,8 @@
 
                         if (colourIndex != 0)
                         {
-                            var colour = this.colours[colourIndex];
-                            var pixel = this.pixels[colourIndex - 1];
+                            var colour = this.palette.Colours[colourIndex];
+                            var pixel = this.palette.Pixels[colourIndex - 1];
                             var rectanglePositionX = x * pixelSize;
                             this.spriteBatch.Draw(pixel, new Rectangle(rectanglePositionX, rectanglePositionY, pixelSize, pixelSize), colour);
                         }

@@ -55,6 +55,7 @@
     <Compile Include="IKeyboardDevice.cs" />
     <Compile Include="IllegalInstructionException.cs" />
     <Compile Include="DisassemblyEventArgs.cs" />
+    <Compile Include="MonoGameColourPalette.cs" />
     <Compile Include="MonoGameKeyboard.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Schip.cs" />
