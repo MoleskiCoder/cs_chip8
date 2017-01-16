@@ -115,7 +115,7 @@
             }
         }
 
-        public int Draw(byte[] memory, int address, int drawX, int drawY, int width, int height)
+        public int Draw(IMemory memory, int address, int drawX, int drawY, int width, int height)
         {
             var bytesPerRow = width / 8;
 
@@ -176,7 +176,7 @@
             return selected;
         }
 
-        private int MaybeDraw(int plane, byte[] memory, int address, int drawX, int drawY, int width, int height)
+        private int MaybeDraw(int plane, IMemory memory, int address, int drawX, int drawY, int width, int height)
         {
             if (this.IsPlaneSelected(plane))
             {
@@ -186,7 +186,7 @@
             return 0;
         }
 
-        private int Draw(int plane, byte[] memory, int address, int drawX, int drawY, int width, int height)
+        private int Draw(int plane, IMemory memory, int address, int drawX, int drawY, int width, int height)
         {
             if (memory == null)
             {
@@ -214,7 +214,7 @@
                 for (var column = 0; column < width; ++column)
                 {
                     var high = column > 7;
-                    var pixelMemory = memory[pixelAddress + (high ? 1 : 0)];
+                    var pixelMemory = memory.Get(pixelAddress + (high ? 1 : 0));
                     var pixel = (pixelMemory & (0x80 >> (column & 0x7))) != 0;
                     if (pixel)
                     {

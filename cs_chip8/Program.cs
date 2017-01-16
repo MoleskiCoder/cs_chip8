@@ -6,8 +6,9 @@
     {
         public static void Main()
         {
-            ////var processor = new Chip8(new MonoGameKeyboard(), new BitmappedGraphics(1));
-            var processor = new Schip(new MonoGameKeyboard(), new BitmappedGraphics(1));
+            ////var processor = new Chip8(new Memory(4096), new MonoGameKeyboard(), new BitmappedGraphics(1));
+            var processor = new Schip(new Memory(4096), new MonoGameKeyboard(), new BitmappedGraphics(1));
+            ////var processor = new XoChip(new Memory(0x10000). new MonoGameKeyboard(), new BitmappedGraphics(2));
 
             ////var game = @"GAMES\PONG.ch8";
 
@@ -28,6 +29,8 @@
             ////var game = @"SGAMES\TEST";
             ////var game = @"SGAMES\UBOAT";
             ////var game = @"SGAMES\WORM3";
+
+            ////var game = @"XOGAMES\xotest.ch8";
 
             ////var game = @"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Flip-8 logo [Newsdee, 2006].ch8";
             ////var game = @"Chip-8 Pack\SuperChip Test Programs\BMP Viewer - Kyori (SC example) [Hap, 2005].ch8";

@@ -82,7 +82,7 @@
 
         public byte GetContents(ushort address)
         {
-            return this.Processor.Memory[address];
+            return this.Processor.Memory.Get(address);
         }
 
         public byte GetRegisterContents(int register)

@@ -30,8 +30,8 @@
 
         private bool compatibility = false;
 
-        public Schip(IKeyboardDevice keyboard, IGraphicsDevice display)
-        : base(keyboard, display)
+        public Schip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display)
+        : base(memory, keyboard, display)
         {
         }
 
@@ -82,7 +82,7 @@
         public override void Initialise()
         {
             base.Initialise();
-            Array.Copy(highFont, 0, this.Memory, HighFontOffset, 16 * 10);
+            Array.Copy(highFont, 0, this.Memory.Bus, HighFontOffset, highFont.Length);
         }
 
         protected void OnHighResolution()
@@ -235,7 +235,7 @@
             else
             {
                 this.MnemomicFormat = "LD\tV{0:X1},[I]";
-                Array.Copy(this.Memory, this.I, this.V, 0, x + 1);
+                Array.Copy(this.Memory.Bus, this.I, this.V, 0, x + 1);
             }
         }
 
@@ -250,7 +250,7 @@
             else
             {
                 this.MnemomicFormat = "LD\t[I],V{0:X1}";
-                Array.Copy(this.V, 0, this.Memory, this.I, x + 1);
+                Array.Copy(this.V, 0, this.Memory.Bus, this.I, x + 1);
             }
         }
 

@@ -32,7 +32,7 @@
 
         private readonly Random randomNumbers = new Random();
 
-        private readonly byte[] memory = new byte[4096];
+        private readonly IMemory memory;
         private readonly byte[] v = new byte[16];
         private readonly ushort[] stack = new ushort[16];
 
@@ -64,8 +64,9 @@
         private IKeyboardDevice keyboard;
         private IGraphicsDevice display;
 
-        public Chip8(IKeyboardDevice keyboard, IGraphicsDevice display)
+        public Chip8(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display)
         {
+            this.memory = memory;
             this.keyboard = keyboard;
             this.display = display;
         }
@@ -158,7 +159,7 @@
             }
         }
 
-        public byte[] Memory
+        public IMemory Memory
         {
             get
             {
@@ -305,10 +306,10 @@
             Array.Clear(this.V, 0, this.V.Length);
 
             // Clear memory
-            Array.Clear(this.Memory, 0, this.Memory.Length);
+            this.memory.Clear();
 
             // Load fonts
-            Array.Copy(standardFont, 0, this.Memory, StandardFontOffset, 16 * 5);
+            Array.Copy(standardFont, 0, this.Memory.Bus, StandardFontOffset, standardFont.Length);
 
             // Reset timers
             this.delayTimer = this.soundTimer = 0;
@@ -428,8 +429,8 @@
             //                      <- n ->
             //        <- x ->
             //               <- y ->
-            var high = this.Memory[this.PC];
-            var low = this.Memory[this.PC + 1];
+            var high = this.Memory.Get(this.PC);
+            var low = this.Memory.Get(this.PC + 1);
             this.opcode = (ushort)((high << 8) + low);
             var nnn = this.opcode & 0xfff;
             var nn = low;
@@ -955,7 +956,7 @@
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
             this.MnemomicFormat = "LD\tV{0:X1},[I]";
-            Array.Copy(this.Memory, this.I, this.V, 0, x + 1);
+            Array.Copy(this.Memory.Bus, this.I, this.V, 0, x + 1);
             this.I += (ushort)(x + 1);
         }
 
@@ -964,7 +965,7 @@
             // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
             this.MnemomicFormat = "LD\t[I],V{0:X1}";
-            Array.Copy(this.V, 0, this.Memory, this.I, x + 1);
+            Array.Copy(this.V, 0, this.Memory.Bus, this.I, x + 1);
             this.I += (ushort)(x + 1);
         }
 
@@ -972,9 +973,9 @@
         {
             this.MnemomicFormat = "LD\tB,V{0:X1}";
             var content = this.V[x];
-            this.memory[this.I] = (byte)(content / 100);
-            this.memory[this.I + 1] = (byte)((content / 10) % 10);
-            this.memory[this.I + 2] = (byte)((content % 100) % 10);
+            this.Memory.Set(this.I, (byte)(content / 100));
+            this.Memory.Set(this.I + 1, (byte)((content / 10) % 10));
+            this.Memory.Set(this.I + 2, (byte)((content % 100) % 10));
         }
 
         protected virtual void LD_F_Vx(int x)
@@ -1081,7 +1082,7 @@
                     headerLength = 13;
                 }
 
-                Array.Copy(bytes, headerLength, this.Memory, offset, size - headerLength);
+                Array.Copy(bytes, headerLength, this.Memory.Bus, offset, size - headerLength);
             }
         }
     }
