@@ -5,7 +5,7 @@
 
     public class Debugger : Controller
     {
-        private readonly Dictionary<short, bool> breakpoints = new Dictionary<short, bool>();
+        private readonly Dictionary<ushort, bool> breakpoints = new Dictionary<ushort, bool>();
         private bool stepping = true;
         private bool cycle = false;
         private bool framed = false;
@@ -60,17 +60,17 @@
             this.cycle = true;
         }
 
-        public void AddBreakpoint(short address)
+        public void AddBreakpoint(ushort address)
         {
             this.breakpoints[address] = false;
         }
 
-        public void AddTemporaryBreakpoint(short address)
+        public void AddTemporaryBreakpoint(ushort address)
         {
             this.breakpoints[address] = true;
         }
 
-        public void RemoveBreakpoint(short address)
+        public void RemoveBreakpoint(ushort address)
         {
             this.breakpoints.Remove(address);
         }
@@ -80,7 +80,7 @@
             this.breakpoints.Clear();
         }
 
-        public byte GetContents(short address)
+        public byte GetContents(ushort address)
         {
             return this.Processor.Memory[address];
         }
@@ -183,7 +183,7 @@
             }
         }
 
-        private bool CheckBreakpoint(short address)
+        private bool CheckBreakpoint(ushort address)
         {
             bool temporary;
             if (this.breakpoints.TryGetValue(address, out temporary))

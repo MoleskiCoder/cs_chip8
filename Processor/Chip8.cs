@@ -36,8 +36,8 @@
         private readonly byte[] v = new byte[16];
         private readonly ushort[] stack = new ushort[16];
 
-        private short i;
-        private short pc;
+        private ushort i;
+        private ushort pc;
         private byte delayTimer;
         private byte soundTimer;
         private ushort sp;
@@ -119,7 +119,7 @@
             }
         }
 
-        public short PC
+        public ushort PC
         {
             get
             {
@@ -145,7 +145,7 @@
             }
         }
 
-        public short I
+        public ushort I
         {
             get
             {
@@ -360,7 +360,7 @@
             }
         }
 
-        protected virtual void OnEmulatingCycle(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        protected virtual void OnEmulatingCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
         {
             var handler = this.EmulatingCycle;
             if (handler != null)
@@ -369,7 +369,7 @@
             }
         }
 
-        protected virtual void OnEmulatedCycle(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        protected virtual void OnEmulatedCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
         {
             this.OnDisassembleInstruction(programCounter, instruction, address, operand, n, x, y);
 
@@ -380,7 +380,7 @@
             }
         }
 
-        protected virtual void OnDisassembleInstruction(short programCounter, ushort instruction, short address, byte operand, int n, int x, int y)
+        protected virtual void OnDisassembleInstruction(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
         {
             var handler = this.DisassembleInstruction;
             if (handler != null)
@@ -421,10 +421,17 @@
 
         protected virtual void EmulateCycle()
         {
+            // <-         opcode         ->
+            // <-    high  -><-    low   ->
+            //        <-        nnn      ->
+            //               <-    nn    ->
+            //                      <- n ->
+            //        <- x ->
+            //               <- y ->
             var high = this.Memory[this.PC];
             var low = this.Memory[this.PC + 1];
             this.opcode = (ushort)((high << 8) + low);
-            var nnn = (short)(this.opcode & 0xfff);
+            var nnn = this.opcode & 0xfff;
             var nn = low;
             var n = low & 0xf;
             var x = high & 0xf;
@@ -454,74 +461,74 @@
 
         protected virtual void Draw(int x, int y, int width, int height)
         {
-            var hits = this.Display.Draw(this.Memory, this.i, this.V[x], this.V[y], width, height);
+            var hits = this.Display.Draw(this.Memory, this.I, this.V[x], this.V[y], width, height);
             this.V[0xf] = (byte)hits;
             this.DrawNeeded = true;
         }
 
-        protected virtual bool EmulateInstruction(short nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstruction(int nnn, byte nn, int n, int x, int y)
         {
             switch (this.opcode & 0xf000)
             {
                 case 0x0000:    // Call
-                    return this.EmulateInstructions_0(nn, n, y);
+                    return this.EmulateInstructions_0(nnn, nn, n, x, y);
 
                 // Jump
                 case 0x1000:        // 1NNN     Flow        goto NNN;
-                    return this.EmulateInstructions_1(nnn);
+                    return this.EmulateInstructions_1(nnn, nn, n, x, y);
 
                 // Call
                 case 0x2000:        // 2NNN     Flow        *(0xNNN)()
-                    return this.EmulateInstructions_2(nnn);
+                    return this.EmulateInstructions_2(nnn, nn, n, x, y);
 
                 // Conditional
                 case 0x3000:        // 3XNN     Cond        if(Vx==NN)
-                    return this.EmulateInstructions_3(nn, x);
+                    return this.EmulateInstructions_3(nnn, nn, n, x, y);
 
                 // Conditional
                 case 0x4000:        // 4XNN     Cond        if(Vx!=NN)
-                    return this.EmulateInstructions_4(nn, x);
+                    return this.EmulateInstructions_4(nnn, nn, n, x, y);
 
                 // Conditional
                 case 0x5000:        // 5XNN     Cond        if(Vx==Vy)
-                    return this.EmulateInstructions_5(x, y);
+                    return this.EmulateInstructions_5(nnn, nn, n, x, y);
 
                 case 0x6000:        // 6XNN     Const       Vx = NN
-                    return this.EmulateInstructions_6(nn, x);
+                    return this.EmulateInstructions_6(nnn, nn, n, x, y);
 
                 case 0x7000:        // 7XNN     Const       Vx += NN
-                    return this.EmulateInstructions_7(nn, x);
+                    return this.EmulateInstructions_7(nnn, nn, n, x, y);
 
                 case 0x8000:
-                    return this.EmulateInstructions_8(n, x, y);
+                    return this.EmulateInstructions_8(nnn, nn, n, x, y);
 
                 case 0x9000:
-                    return this.EmulateInstructions_9(n, x, y);
+                    return this.EmulateInstructions_9(nnn, nn, n, x, y);
 
                 case 0xa000:        // ANNN     MEM         I = NNN
-                    return this.EmulateInstructions_A(nnn);
+                    return this.EmulateInstructions_A(nnn, nn, n, x, y);
 
                 case 0xB000:        // BNNN     Flow        PC=V0+NNN
-                    return this.EmulateInstructions_B(nnn, x);
+                    return this.EmulateInstructions_B(nnn, nn, n, x, y);
 
                 case 0xc000:        // CXNN     Rand        Vx=rand()&NN
-                    return this.EmulateInstructions_C(nn, x);
+                    return this.EmulateInstructions_C(nnn, nn, n, x, y);
 
                 case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
-                    return this.EmulateInstructions_D(n, x, y);
+                    return this.EmulateInstructions_D(nnn, nn, n, x, y);
 
                 case 0xe000:
-                    return this.EmulateInstructions_E(nn, x);
+                    return this.EmulateInstructions_E(nnn, nn, n, x, y);
 
                 case 0xf000:
-                    return this.EmulateInstructions_F(nn, x);
+                    return this.EmulateInstructions_F(nnn, nn, n, x, y);
 
                 default:
                     return false;
             }
         }
 
-        protected virtual bool EmulateInstructions_F(byte nn, int x)
+        protected virtual bool EmulateInstructions_F(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = true;
             switch (nn)
@@ -573,7 +580,7 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_E(byte nn, int x)
+        protected virtual bool EmulateInstructions_E(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = true;
             switch (nn)
@@ -593,35 +600,35 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_D(int n, int x, int y)
+        protected virtual bool EmulateInstructions_D(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = this.UsedN = true;
             this.DRW(x, y, n);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_C(byte nn, int x)
+        protected virtual bool EmulateInstructions_C(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedOperand = true;
             this.RND(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_B(short nnn, int x)
+        protected virtual bool EmulateInstructions_B(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.JP_V0(x, nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_A(short nnn)
+        protected virtual bool EmulateInstructions_A(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.LD_I(nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_9(int n, int x, int y)
+        protected virtual bool EmulateInstructions_9(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             switch (n)
@@ -637,7 +644,7 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_8(int n, int x, int y)
+        protected virtual bool EmulateInstructions_8(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             switch (n)
@@ -685,58 +692,58 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_7(byte nn, int x)
+        protected virtual bool EmulateInstructions_7(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedOperand = true;
             this.ADD(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_6(byte nn, int x)
+        protected virtual bool EmulateInstructions_6(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedOperand = true;
             this.LD(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_5(int x, int y)
+        protected virtual bool EmulateInstructions_5(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             this.SE(x, y);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_4(byte nn, int x)
+        protected virtual bool EmulateInstructions_4(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedOperand = this.UsedX = true;
             this.SNE(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_3(byte nn, int x)
+        protected virtual bool EmulateInstructions_3(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedOperand = this.UsedX = true;
             this.SE(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_2(short nnn)
+        protected virtual bool EmulateInstructions_2(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.CALL(nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_1(short nnn)
+        protected virtual bool EmulateInstructions_1(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.JP(nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_0(byte low, int n, int y)
+        protected virtual bool EmulateInstructions_0(int nnn, byte nn, int n, int x, int y)
         {
-            switch (low)
+            switch (nn)
             {
                 case 0xe0:  // 00E0     Display     disp_clear()
                     this.CLS();
@@ -765,20 +772,20 @@
         protected virtual void RET()
         {
             this.MnemomicFormat = "RET";
-            this.PC = (short)this.Stack[--this.SP & 0xF];
+            this.PC = this.Stack[--this.SP & 0xF];
         }
 
-        protected virtual void JP(short nnn)
+        protected virtual void JP(int nnn)
         {
             this.MnemomicFormat = "JP\t{0:X3}";
-            this.PC = nnn;
+            this.PC = (ushort)nnn;
         }
 
-        protected virtual void CALL(short nnn)
+        protected virtual void CALL(int nnn)
         {
             this.MnemomicFormat = "CALL\t{0:X3}";
-            this.Stack[this.SP++] = (ushort)this.PC;
-            this.PC = nnn;
+            this.Stack[this.SP++] = this.PC;
+            this.PC = (ushort)nnn;
         }
 
         protected virtual void SE(int x, byte nn)
@@ -894,13 +901,13 @@
             }
         }
 
-        protected virtual void LD_I(short nnn)
+        protected virtual void LD_I(int nnn)
         {
             this.MnemomicFormat = "LD\tI,#{0:X3}";
-            this.I = nnn;
+            this.I = (ushort)nnn;
         }
 
-        protected virtual void JP_V0(int x, short nnn)
+        protected virtual void JP_V0(int x, int nnn)
         {
             this.MnemomicFormat = "JP\t[V0],#{0:X3}";
 
@@ -909,7 +916,7 @@
             //  VIP: correctly jumps based on v0
             //  HP48 -SC: reads highest nibble of address to select
             //      register to apply to address (high nibble pulls double duty)
-            this.PC = (short)(this.V[0] + nnn);
+            this.PC = (ushort)(this.V[0] + nnn);
         }
 
         protected virtual void RND(int x, byte nn)
@@ -949,7 +956,7 @@
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
             this.MnemomicFormat = "LD\tV{0:X1},[I]";
             Array.Copy(this.Memory, this.I, this.V, 0, x + 1);
-            this.I += (short)(x + 1);
+            this.I += (ushort)(x + 1);
         }
 
         protected virtual void LD_II_Vx(int x)
@@ -958,7 +965,7 @@
             // Saves/Loads registers up to X at I pointer - VIP: increases I, HP48-SC: I remains static
             this.MnemomicFormat = "LD\t[I],V{0:X1}";
             Array.Copy(this.V, 0, this.Memory, this.I, x + 1);
-            this.I += (short)(x + 1);
+            this.I += (ushort)(x + 1);
         }
 
         protected virtual void LD_B_Vx(int x)
@@ -973,7 +980,7 @@
         protected virtual void LD_F_Vx(int x)
         {
             this.MnemomicFormat = "LD\tF,V{0:X1}";
-            this.I = (short)(StandardFontOffset + (5 * this.V[x]));
+            this.I = (ushort)(StandardFontOffset + (5 * this.V[x]));
         }
 
         protected virtual void ADD_I_Vx(int x)

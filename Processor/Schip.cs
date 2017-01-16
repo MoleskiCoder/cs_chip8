@@ -109,9 +109,8 @@
             }
         }
 
-        protected override bool EmulateInstructions_F(byte nn, int x)
+        protected override bool EmulateInstructions_F(int nnn, byte nn, int n, int x, int y)
         {
-            this.UsedX = true;
             switch (nn)
             {
                 case 0x30:
@@ -127,13 +126,13 @@
                     break;
 
                 default:
-                    return base.EmulateInstructions_F(nn, x);
+                    return base.EmulateInstructions_F(nnn, nn, n, x, y);
             }
 
             return true;
         }
 
-        protected override bool EmulateInstructions_D(int n, int x, int y)
+        protected override bool EmulateInstructions_D(int nnn, byte nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             switch (n)
@@ -143,15 +142,15 @@
                     break;
 
                 default:
-                    return base.EmulateInstructions_D(n, x, y);
+                    return base.EmulateInstructions_D(nnn, nn, n, x, y);
             }
 
             return true;
         }
 
-        protected override bool EmulateInstructions_0(byte low, int n, int y)
+        protected override bool EmulateInstructions_0(int nnn, byte nn, int n, int x, int y)
         {
-            switch (low)
+            switch (nn)
             {
                 case 0xfa:
                     this.COMPATIBILITY();
@@ -185,7 +184,7 @@
                             break;
 
                         default:
-                            return base.EmulateInstructions_0(low, n, y);
+                            return base.EmulateInstructions_0(nnn, nn, n, x, y);
                     }
 
                     break;
@@ -219,10 +218,10 @@
         //  VIP: correctly jumps based on v0
         //  HP48 -SC: reads highest nibble of address to select
         //      register to apply to address (high nibble pulls double duty)
-        protected override void JP_V0(int x, short nnn)
+        protected override void JP_V0(int x, int nnn)
         {
             this.MnemomicFormat = "JP\t[V0],#{0:X3}";
-            this.PC = (short)(this.V[x] + nnn);
+            this.PC = (ushort)(this.V[x] + nnn);
         }
 
         // https://github.com/Chromatophore/HP48-Superchip#fx55--fx65
@@ -258,7 +257,7 @@
         private void LD_HF_Vx(int x)
         {
             this.MnemomicFormat = "LD\tHF,V{0:X1}";
-            this.I = (short)(HighFontOffset + (10 * this.V[x]));
+            this.I = (ushort)(HighFontOffset + (10 * this.V[x]));
         }
 
         private void XDRW(int x, int y)
