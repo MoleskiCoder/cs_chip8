@@ -61,6 +61,7 @@
     <Compile Include="MonoGameKeyboard.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Schip.cs" />
+    <Compile Include="XoChip.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
