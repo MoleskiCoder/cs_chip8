@@ -171,6 +171,7 @@
             var screenHeight = this.processor.Display.Height;
 
             var source = this.processor.Display.Graphics;
+            var numberOfPlanes = this.processor.Display.NumberOfPlanes;
 
             this.spriteBatch.Begin();
             try
@@ -182,7 +183,7 @@
                     for (int x = 0; x < screenWidth; x++)
                     {
                         int colourIndex = 0;
-                        for (int plane = 0; plane < this.processor.Display.NumberOfPlanes; ++plane)
+                        for (int plane = 0; plane < numberOfPlanes; ++plane)
                         {
                             var bit = source[plane][x + rowOffset];
                             colourIndex |= Convert.ToByte(bit) << plane;
