@@ -87,7 +87,7 @@
             }
         }
 
-        private int PlaneMask
+        public int PlaneMask
         {
             get
             {

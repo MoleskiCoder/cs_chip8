@@ -12,6 +12,12 @@
             get;
         }
 
+        int PlaneMask
+        {
+            get;
+            set;
+        }
+
         int NumberOfColours
         {
             get;
