@@ -1,6 +1,9 @@
 ﻿namespace Emulator
 {
     using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Processor;
@@ -101,6 +104,26 @@
             }
         }
 
+        private void ShowState()
+        {
+            Console.WriteLine(this.BuildState());
+        }            
+
+        private string BuildState()
+        {
+            var index = this.debugger.Processor.I;
+            var indexValue = string.Format(CultureInfo.InvariantCulture, "I={0:x4}", index);
+
+            var registers = this.debugger.Processor.V;
+            var registerValues = new string[registers.Length];
+            for (int i = 0; i < registers.Length; ++i)
+            {
+                registerValues[i] = string.Format(CultureInfo.InvariantCulture, "V{0:x1}={1:x2}", i, registers[i]);
+            }
+
+            return string.Format(CultureInfo.InvariantCulture, "{0} {1}", indexValue, string.Join(",", registerValues));
+        }
+
         private void Debugger_Loaded(object sender, EventArgs e)
         {
             this.debuggerAvailable.Set();
@@ -154,6 +177,7 @@
         private void Processor_DisassembleInstruction(object sender, DisassemblyEventArgs e)
         {
             Console.WriteLine(e.Output);
+            this.ShowState();
         }
     }
 }
