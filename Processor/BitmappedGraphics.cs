@@ -122,8 +122,11 @@
             var hits = 0;
             for (int plane = 0; plane < this.NumberOfPlanes; ++plane)
             {
-                hits += this.MaybeDraw(plane, memory, address, drawX, drawY, width, height);
-                address += height * bytesPerRow;
+                if (this.IsPlaneSelected(plane))
+                {
+                    hits += this.Draw(plane, memory, address, drawX, drawY, width, height);
+                    address += height * bytesPerRow;
+                }
             }
 
             return hits;
@@ -174,16 +177,6 @@
             var mask = 1 << plane;
             var selected = (this.PlaneMask & mask) != 0;
             return selected;
-        }
-
-        private int MaybeDraw(int plane, IMemory memory, int address, int drawX, int drawY, int width, int height)
-        {
-            if (this.IsPlaneSelected(plane))
-            {
-                return this.Draw(plane, memory, address, drawX, drawY, width, height);
-            }
-
-            return 0;
         }
 
         private int Draw(int plane, IMemory memory, int address, int drawX, int drawY, int width, int height)
