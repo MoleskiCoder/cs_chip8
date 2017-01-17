@@ -111,6 +111,7 @@
 
         protected override bool EmulateInstructions_F(int nnn, byte nn, int n, int x, int y)
         {
+            this.UsedX = true;
             switch (nn)
             {
                 case 0x30:
@@ -126,6 +127,7 @@
                     break;
 
                 default:
+                    this.UsedX = false;
                     return base.EmulateInstructions_F(nnn, nn, n, x, y);
             }
 
@@ -142,6 +144,7 @@
                     break;
 
                 default:
+                    this.UsedX = this.UsedY = false;
                     return base.EmulateInstructions_D(nnn, nn, n, x, y);
             }
 

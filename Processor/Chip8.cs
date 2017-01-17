@@ -363,6 +363,61 @@
 
         protected virtual void OnEmulatingCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
         {
+            this.OnEmulatingCycle();
+        }
+
+        protected virtual void OnEmulatedCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
+        {
+            this.OnDisassembleInstruction(programCounter, instruction, address, operand, n, x, y);
+            this.OnEmulatedCycle();
+        }
+
+        protected virtual void OnDisassembleInstruction(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
+        {
+            var objects = new List<object>();
+
+            if (this.UsedAddress)
+            {
+                objects.Add(address);
+            }
+
+            if (this.UsedN)
+            {
+                objects.Add(n);
+            }
+
+            if (this.UsedX)
+            {
+                objects.Add(x);
+            }
+
+            if (this.UsedY)
+            {
+                objects.Add(y);
+            }
+
+            if (this.UsedOperand)
+            {
+                objects.Add(operand);
+            }
+
+            var pre = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", programCounter, instruction);
+            var post = string.Format(CultureInfo.InvariantCulture, this.MnemomicFormat, objects.ToArray());
+
+            this.OnDisassembleInstruction(pre + post);
+        }
+
+        protected virtual void OnDisassembleInstruction(string output)
+        {
+            var handler = this.DisassembleInstruction;
+            if (handler != null)
+            {
+                handler(this, new DisassemblyEventArgs(output));
+            }
+        }
+
+        protected virtual void OnEmulatingCycle()
+        {
             var handler = this.EmulatingCycle;
             if (handler != null)
             {
@@ -370,53 +425,12 @@
             }
         }
 
-        protected virtual void OnEmulatedCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
+        protected virtual void OnEmulatedCycle()
         {
-            this.OnDisassembleInstruction(programCounter, instruction, address, operand, n, x, y);
-
             var handler = this.EmulatedCycle;
             if (handler != null)
             {
                 handler(this, EventArgs.Empty);
-            }
-        }
-
-        protected virtual void OnDisassembleInstruction(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
-        {
-            var handler = this.DisassembleInstruction;
-            if (handler != null)
-            {
-                var objects = new List<object>();
-
-                if (this.UsedAddress)
-                {
-                    objects.Add(address);
-                }
-
-                if (this.UsedN)
-                {
-                    objects.Add(n);
-                }
-
-                if (this.UsedX)
-                {
-                    objects.Add(x);
-                }
-
-                if (this.UsedY)
-                {
-                    objects.Add(y);
-                }
-
-                if (this.UsedOperand)
-                {
-                    objects.Add(operand);
-                }
-
-                var pre = string.Format(CultureInfo.InvariantCulture, "PC={0:x4}\t{1:x4}\t", programCounter, instruction);
-                var post = string.Format(CultureInfo.InvariantCulture, this.MnemomicFormat, objects.ToArray());
-
-                handler(this, new DisassemblyEventArgs(pre + post));
             }
         }
 
@@ -447,17 +461,12 @@
             this.PC += 2;
 
             this.OnEmulatingCycle(programCounter, this.opcode, nnn, nn, n, x, y);
-            try
+            if (!this.EmulateInstruction(nnn, nn, n, x, y))
             {
-                if (!this.EmulateInstruction(nnn, nn, n, x, y))
-                {
-                    throw new IllegalInstructionException(this.opcode);
-                }
+                throw new IllegalInstructionException(this.opcode);
             }
-            finally
-            {
-                this.OnEmulatedCycle(programCounter, this.opcode, nnn, nn, n, x, y);
-            }
+
+            this.OnEmulatedCycle(programCounter, this.opcode, nnn, nn, n, x, y);
         }
 
         protected virtual void Draw(int x, int y, int width, int height)
@@ -469,6 +478,8 @@
 
         protected virtual bool EmulateInstruction(int nnn, byte nn, int n, int x, int y)
         {
+            this.UsedAddress = this.UsedOperand = this.UsedN = this.UsedX = this.UsedY = false;
+
             switch (this.opcode & 0xf000)
             {
                 case 0x0000:    // Call
@@ -928,8 +939,7 @@
 
         protected virtual void DRW(int x, int y, int n)
         {
-            this.MnemomicFormat = "DRW\tV{0:X1},V{1:X1},#{2:X1}";
-            this.UsedN = true;
+            this.MnemomicFormat = "DRW\tV{1:X1},V{2:X1},#{0:X1}";
             this.Draw(x, y, 8, n);
         }
 
