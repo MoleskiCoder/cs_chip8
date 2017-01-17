@@ -109,7 +109,7 @@
             }
         }
 
-        protected override bool EmulateInstructions_F(int nnn, byte nn, int n, int x, int y)
+        protected override bool EmulateInstructions_F(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = true;
             switch (nn)
@@ -134,7 +134,7 @@
             return true;
         }
 
-        protected override bool EmulateInstructions_D(int nnn, byte nn, int n, int x, int y)
+        protected override bool EmulateInstructions_D(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             switch (n)
@@ -151,7 +151,7 @@
             return true;
         }
 
-        protected override bool EmulateInstructions_0(int nnn, byte nn, int n, int x, int y)
+        protected override bool EmulateInstructions_0(int nnn, int nn, int n, int x, int y)
         {
             switch (nn)
             {

@@ -9,6 +9,8 @@
 
         byte Get(int address);
 
+        ushort GetWord(int address);
+
         void Set(int address, byte value);
 
         void Clear();

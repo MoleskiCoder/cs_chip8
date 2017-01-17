@@ -361,18 +361,18 @@
             }
         }
 
-        protected virtual void OnEmulatingCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
+        protected virtual void OnEmulatingCycle(ushort programCounter, ushort instruction, int address, int operand, int n, int x, int y)
         {
             this.OnEmulatingCycle();
         }
 
-        protected virtual void OnEmulatedCycle(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
+        protected virtual void OnEmulatedCycle(ushort programCounter, ushort instruction, int address, int operand, int n, int x, int y)
         {
             this.OnDisassembleInstruction(programCounter, instruction, address, operand, n, x, y);
             this.OnEmulatedCycle();
         }
 
-        protected virtual void OnDisassembleInstruction(ushort programCounter, ushort instruction, int address, byte operand, int n, int x, int y)
+        protected virtual void OnDisassembleInstruction(ushort programCounter, ushort instruction, int address, int operand, int n, int x, int y)
         {
             var objects = new List<object>();
 
@@ -443,14 +443,12 @@
             //                      <- n ->
             //        <- x ->
             //               <- y ->
-            var high = this.Memory.Get(this.PC);
-            var low = this.Memory.Get(this.PC + 1);
-            this.opcode = (ushort)((high << 8) + low);
+            this.opcode = this.Memory.GetWord(this.PC);
             var nnn = this.opcode & 0xfff;
-            var nn = low;
-            var n = low & 0xf;
-            var x = high & 0xf;
-            var y = (low & 0xf0) >> 4;
+            var nn = this.opcode & 0xff;
+            var n = nn & 0xf;
+            var x = (this.opcode & 0xf00) >> 8;
+            var y = (nn & 0xf0) >> 4;
 
             if ((this.PC % 2) == 1)
             {
@@ -476,7 +474,7 @@
             this.DrawNeeded = true;
         }
 
-        protected virtual bool EmulateInstruction(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstruction(int nnn, int nn, int n, int x, int y)
         {
             this.UsedAddress = this.UsedOperand = this.UsedN = this.UsedX = this.UsedY = false;
 
@@ -540,7 +538,7 @@
             }
         }
 
-        protected virtual bool EmulateInstructions_F(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_F(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = true;
             switch (nn)
@@ -592,7 +590,7 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_E(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_E(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = true;
             switch (nn)
@@ -612,35 +610,35 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_D(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_D(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = this.UsedN = true;
             this.DRW(x, y, n);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_C(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_C(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedOperand = true;
             this.RND(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_B(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_B(int nnn, int nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.JP_V0(x, nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_A(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_A(int nnn, int nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.LD_I(nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_9(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_9(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             switch (n)
@@ -656,7 +654,7 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_8(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_8(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             switch (n)
@@ -704,56 +702,56 @@
             return true;
         }
 
-        protected virtual bool EmulateInstructions_7(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_7(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedOperand = true;
-            this.ADD(x, nn);
+            this.ADD_REG_IMM(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_6(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_6(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedOperand = true;
-            this.LD(x, nn);
+            this.LD_REG_IMM(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_5(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_5(int nnn, int nn, int n, int x, int y)
         {
             this.UsedX = this.UsedY = true;
             this.SE(x, y);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_4(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_4(int nnn, int nn, int n, int x, int y)
         {
             this.UsedOperand = this.UsedX = true;
-            this.SNE(x, nn);
+            this.SNE_REG_IMM(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_3(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_3(int nnn, int nn, int n, int x, int y)
         {
             this.UsedOperand = this.UsedX = true;
-            this.SE(x, nn);
+            this.SE_REG_IMM(x, nn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_2(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_2(int nnn, int nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.CALL(nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_1(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_1(int nnn, int nn, int n, int x, int y)
         {
             this.UsedAddress = true;
             this.JP(nnn);
             return true;
         }
 
-        protected virtual bool EmulateInstructions_0(int nnn, byte nn, int n, int x, int y)
+        protected virtual bool EmulateInstructions_0(int nnn, int nn, int n, int x, int y)
         {
             switch (nn)
             {
@@ -800,7 +798,7 @@
             this.PC = (ushort)nnn;
         }
 
-        protected virtual void SE(int x, byte nn)
+        protected virtual void SE_REG_IMM(int x, int nn)
         {
             this.MnemomicFormat = "SE\tV{0:X1},#{1:X2}";
             if (this.V[x] == nn)
@@ -809,7 +807,7 @@
             }
         }
 
-        protected virtual void SNE(int x, byte nn)
+        protected virtual void SNE_REG_IMM(int x, int nn)
         {
             this.MnemomicFormat = "SNE\tV{0:X1},#{1:X2}";
             if (this.V[x] != nn)
@@ -827,16 +825,16 @@
             }
         }
 
-        protected virtual void LD(int x, byte nn)
+        protected virtual void LD_REG_IMM(int x, int nn)
         {
             this.MnemomicFormat = "LD\tV{0:X1},#{1:X2}";
-            this.V[x] = nn;
+            this.V[x] = (byte)nn;
         }
 
-        protected virtual void ADD(int x, byte nn)
+        protected virtual void ADD_REG_IMM(int x, int nn)
         {
             this.MnemomicFormat = "ADD\tV{0:X1},#{1:X2}";
-            this.V[x] += nn;
+            this.V[x] += (byte)nn;
         }
 
         protected virtual void LD(int x, int y)
@@ -931,7 +929,7 @@
             this.PC = (ushort)(this.V[0] + nnn);
         }
 
-        protected virtual void RND(int x, byte nn)
+        protected virtual void RND(int x, int nn)
         {
             this.MnemomicFormat = "RND\tV{0:X1},#{1:X2}";
             this.V[x] = (byte)(this.randomNumbers.Next(byte.MaxValue) & nn);
