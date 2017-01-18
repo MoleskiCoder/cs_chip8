@@ -30,33 +30,14 @@
 
         private bool compatibility = false;
 
-        public Schip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, bool allowMisalignedOpcodes)
-        : base(memory, keyboard, display, allowMisalignedOpcodes)
+        public Schip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, Configuration configuration)
+        : base(memory, keyboard, display, configuration)
         {
         }
 
         public event EventHandler<EventArgs> HighResolutionConfigured;
 
         public event EventHandler<EventArgs> LowResolutionConfigured;
-
-        // https://github.com/Chromatophore/HP48-Superchip#platform-speed
-        // The HP48 calculator is much faster than the Cosmac VIP, but,
-        // there is still no solid understanding of how much faster it is for
-        // most instructions for the purposes of designing compelling programs with
-        // Octo. A modified version of cmark77, a Chip-8 graphical benchmark tool
-        // written by taqueso on the Something Awful forums was used and
-        // yielded scores of 0.80 kOPs in standard/lores and 1.3 kOps in extended/hires.
-        // However graphical ops are significantly more costly than other ops on period
-        // hardware versus Octo (where they are basically free) and as a result a raw
-        // computational cycles/second speed assessment still has not been completed.
-        public override int CyclesPerFrame
-        {
-            get
-            {
-                // Running 22 FPS at 1.32 kOps
-                return 22;
-            }
-        }
 
         public byte[] R
         {

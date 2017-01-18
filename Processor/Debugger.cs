@@ -152,7 +152,7 @@
 
         private void RunNormalFrame()
         {
-            for (int i = 0; !this.stepping && (i < this.Processor.CyclesPerFrame); ++i)
+            for (int i = 0; !this.stepping && (i < this.Processor.RuntimeConfiguration.CyclesPerFrame); ++i)
             {
                 this.stepping = this.CheckBreakpoint(this.Processor.PC);
                 if (!this.stepping)

@@ -143,7 +143,7 @@
 
         protected virtual void RunFrame()
         {
-            for (int i = 0; i < this.processor.CyclesPerFrame; ++i)
+            for (int i = 0; i < this.processor.RuntimeConfiguration.CyclesPerFrame; ++i)
             {
                 if (this.RunCycle())
                 {

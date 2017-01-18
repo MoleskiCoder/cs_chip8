@@ -30,6 +30,10 @@
             0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         };
 
+        private readonly IKeyboardDevice keyboard;
+        private readonly IGraphicsDevice display;
+        private readonly Configuration runtimeConfiguration;
+
         private readonly Random randomNumbers = new Random();
 
         private readonly IMemory memory;
@@ -61,17 +65,12 @@
         private bool usedX;
         private bool usedY;
 
-        private IKeyboardDevice keyboard;
-        private IGraphicsDevice display;
-
-        private readonly bool allowMisalignedOpcodes;
-
-        public Chip8(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, bool allowMisalignedOpcodes)
+        public Chip8(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, Configuration configuration)
         {
             this.memory = memory;
             this.keyboard = keyboard;
             this.display = display;
-            this.allowMisalignedOpcodes = allowMisalignedOpcodes;
+            this.runtimeConfiguration = configuration;
         }
 
         public event EventHandler<EventArgs> BeepStarting;
@@ -194,25 +193,6 @@
             }
         }
 
-        // https://github.com/Chromatophore/HP48-Superchip#platform-speed
-        // The HP48 calculator is much faster than the Cosmac VIP, but,
-        // there is still no solid understanding of how much faster it is for
-        // most instructions for the purposes of designing compelling programs with
-        // Octo. A modified version of cmark77, a Chip-8 graphical benchmark tool
-        // written by taqueso on the Something Awful forums was used and
-        // yielded scores of 0.80 kOPs in standard/lores and 1.3 kOps in extended/hires.
-        // However graphical ops are significantly more costly than other ops on period
-        // hardware versus Octo (where they are basically free) and as a result a raw
-        // computational cycles/second speed assessment still has not been completed.
-        public virtual int CyclesPerFrame
-        {
-            get
-            {
-                // Running 13 FPS at .78 kOps
-                return 13;
-            }
-        }
-
         protected string MnemomicFormat
         {
             get
@@ -291,12 +271,20 @@
             }
         }
 
+        public Configuration RuntimeConfiguration
+        {
+            get
+            {
+                return this.runtimeConfiguration;
+            }
+        }
+
         public virtual void Initialise()
         {
             this.Finished = false;
             this.DrawNeeded = false;
 
-            this.PC = 0x200;     // Program counter starts at 0x200
+            this.PC = this.RuntimeConfiguration.StartAddress;
             this.I = 0;          // Reset index register
             this.SP = 0;         // Reset stack pointer
 
@@ -321,7 +309,7 @@
         public void LoadGame(string game)
         {
             var path = @"..\..\..\Roms\" + game;
-            this.LoadRom(path, 0x200);
+            this.LoadRom(path, this.RuntimeConfiguration.LoadAddress);
         }
 
         public void Step()
@@ -453,7 +441,7 @@
             var x = (this.opcode & 0xf00) >> 8;
             var y = (nn & 0xf0) >> 4;
 
-            if (!this.allowMisalignedOpcodes && (this.PC % 2) == 1)
+            if (!this.RuntimeConfiguration.AllowMisalignedOpcodes && (this.PC % 2) == 1)
             {
                 throw new InvalidOperationException("Instruction is not on an aligned address");
             }
