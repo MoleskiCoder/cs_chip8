@@ -26,12 +26,14 @@
                 this.type = value;
             }
         }
+
         public bool AllowMisalignedOpcodes
         {
             get
             {
                 return this.allowMisalignedOpcodes;
             }
+
             set
             {
                 this.allowMisalignedOpcodes = value;
@@ -54,6 +56,7 @@
             {
                 return this.cyclesPerFrame;
             }
+
             set
             {
                 this.cyclesPerFrame = value;
@@ -66,6 +69,7 @@
             {
                 return this.startAddress;
             }
+
             set
             {
                 this.startAddress = value;
@@ -78,6 +82,7 @@
             {
                 return this.loadAddress;
             }
+
             set
             {
                 this.loadAddress = value;
@@ -90,6 +95,7 @@
             {
                 return this.memorySize;
             }
+
             set
             {
                 this.memorySize = value;
@@ -102,28 +108,10 @@
             {
                 return this.graphicPlanes;
             }
+
             set
             {
                 this.graphicPlanes = value;
-            }
-        }
-
-
-        public Chip8 BuildProcessor()
-        {
-            switch (this.Type)
-            {
-                case ProcessorLevel.Chip8:
-                    return new Chip8(new Memory(this.MemorySize), new MonoGameKeyboard(), new BitmappedGraphics(this.GraphicPlanes), this);
-
-                case ProcessorLevel.SuperChip:
-                    return new Schip(new Memory(this.MemorySize), new MonoGameKeyboard(), new BitmappedGraphics(this.GraphicPlanes), this);
-
-                case ProcessorLevel.XoChip:
-                    return new XoChip(new Memory(this.MemorySize), new MonoGameKeyboard(), new BitmappedGraphics(this.GraphicPlanes), this);
-
-                default:
-                    return null;
             }
         }
 
@@ -142,6 +130,24 @@
             configuration.MemorySize = 0x10000;
             configuration.GraphicPlanes = 2;
             return configuration;
+        }
+
+        public Chip8 BuildProcessor()
+        {
+            switch (this.Type)
+            {
+                case ProcessorLevel.Chip8:
+                    return new Chip8(new Memory(this.MemorySize), new MonoGameKeyboard(), new BitmappedGraphics(this.GraphicPlanes), this);
+
+                case ProcessorLevel.SuperChip:
+                    return new Schip(new Memory(this.MemorySize), new MonoGameKeyboard(), new BitmappedGraphics(this.GraphicPlanes), this);
+
+                case ProcessorLevel.XoChip:
+                    return new XoChip(new Memory(this.MemorySize), new MonoGameKeyboard(), new BitmappedGraphics(this.GraphicPlanes), this);
+
+                default:
+                    return null;
+            }
         }
     }
 }

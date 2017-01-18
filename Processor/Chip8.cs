@@ -193,6 +193,14 @@
             }
         }
 
+        public Configuration RuntimeConfiguration
+        {
+            get
+            {
+                return this.runtimeConfiguration;
+            }
+        }
+
         protected string MnemomicFormat
         {
             get
@@ -268,14 +276,6 @@
             set
             {
                 this.usedY = value;
-            }
-        }
-
-        public Configuration RuntimeConfiguration
-        {
-            get
-            {
-                return this.runtimeConfiguration;
             }
         }
 
