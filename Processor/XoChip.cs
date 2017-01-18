@@ -9,8 +9,8 @@
 
         private int nnnn;
 
-        public XoChip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display)
-        : base(memory, keyboard, display)
+        public XoChip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, bool allowMisalignedOpcodes)
+        : base(memory, keyboard, display, allowMisalignedOpcodes)
         {
         }
 

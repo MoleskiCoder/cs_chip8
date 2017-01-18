@@ -30,8 +30,8 @@
 
         private bool compatibility = false;
 
-        public Schip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display)
-        : base(memory, keyboard, display)
+        public Schip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, bool allowMisalignedOpcodes)
+        : base(memory, keyboard, display, allowMisalignedOpcodes)
         {
         }
 

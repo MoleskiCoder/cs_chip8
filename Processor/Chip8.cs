@@ -64,11 +64,14 @@
         private IKeyboardDevice keyboard;
         private IGraphicsDevice display;
 
-        public Chip8(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display)
+        private readonly bool allowMisalignedOpcodes;
+
+        public Chip8(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, bool allowMisalignedOpcodes)
         {
             this.memory = memory;
             this.keyboard = keyboard;
             this.display = display;
+            this.allowMisalignedOpcodes = allowMisalignedOpcodes;
         }
 
         public event EventHandler<EventArgs> BeepStarting;
@@ -450,7 +453,7 @@
             var x = (this.opcode & 0xf00) >> 8;
             var y = (nn & 0xf0) >> 4;
 
-            if ((this.PC % 2) == 1)
+            if (!this.allowMisalignedOpcodes && (this.PC % 2) == 1)
             {
                 throw new InvalidOperationException("Instruction is not on an aligned address");
             }
