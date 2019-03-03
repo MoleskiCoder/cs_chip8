@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="Chip8.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
     using System.Collections.Generic;
@@ -10,8 +14,8 @@
     {
         private const int StandardFontOffset = 0x1b0;
 
-        private static byte[] standardFont =
-        { 
+        private static readonly byte[] StandardFont =
+        {
             0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
             0x20, 0x60, 0x20, 0x20, 0x70, // 1
             0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -27,50 +31,23 @@
             0xF0, 0x80, 0x80, 0x80, 0xF0, // C
             0xE0, 0x90, 0x90, 0x90, 0xE0, // D
             0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-            0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+            0xF0, 0x80, 0xF0, 0x80, 0x80, // F
         };
 
         private readonly IKeyboardDevice keyboard;
-        private readonly IGraphicsDevice display;
-        private readonly Configuration runtimeConfiguration;
-
         private readonly Random randomNumbers = new Random();
-
-        private readonly IMemory memory;
-        private readonly byte[] v = new byte[16];
-        private readonly ushort[] stack = new ushort[16];
-
-        private ushort i;
-        private ushort pc;
         private byte delayTimer;
         private byte soundTimer;
-        private ushort sp;
-
         private ushort opcode;
-
-        private bool drawNeeded;
-
-        private bool soundPlaying = false;
-
         private bool waitingForKeyPress;
         private int waitingForKeyPressRegister;
 
-        private bool finished = false;
-
-        // Disassembly members...
-        private string mnemomicFormat;
-        private bool usedAddress;
-        private bool usedOperand;
-        private bool usedN;
-        private bool usedX;
-        private bool usedY;
-
         public Chip8(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, Configuration configuration)
         {
-            this.memory = memory;
+            this.Memory = memory;
             this.keyboard = keyboard;
-            this.display = display;
-            this.runtimeConfiguration = configuration;
+            this.Display = display;
+            this.RuntimeConfiguration = configuration;
         }
 
         public event EventHandler<EventArgs> BeepStarting;
@@ -83,201 +60,39 @@
 
         public event EventHandler<DisassemblyEventArgs> DisassembleInstruction;
 
-        public bool Finished
-        {
-            get
-            {
-                return this.finished;
-            }
+        public bool Finished { get; set; } = false;
 
-            set
-            {
-                this.finished = value;
-            }
-        }
+        public bool DrawNeeded { get; set; }
 
-        public bool DrawNeeded
-        {
-            get
-            {
-                return this.drawNeeded;
-            }
+        public bool SoundPlaying { get; private set; } = false;
 
-            set
-            {
-                this.drawNeeded = value;
-            }
-        }
+        public ushort PC { get; set; }
 
-        public bool SoundPlaying
-        {
-            get
-            {
-                return this.soundPlaying;
-            }
+        public ushort SP { get; set; }
 
-            private set
-            {
-                this.soundPlaying = value;
-            }
-        }
+        public ushort I { get; set; }
 
-        public ushort PC
-        {
-            get
-            {
-                return this.pc;
-            }
+        public IMemory Memory { get; }
 
-            set
-            {
-                this.pc = value;
-            }
-        }
+        public byte[] V { get; } = new byte[16];
 
-        public ushort SP
-        {
-            get
-            {
-                return this.sp;
-            }
+        public ushort[] Stack { get; } = new ushort[16];
 
-            set
-            {
-                this.sp = value;
-            }
-        }
+        public IGraphicsDevice Display { get; }
 
-        public ushort I
-        {
-            get
-            {
-                return this.i;
-            }
+        public Configuration RuntimeConfiguration { get; }
 
-            set
-            {
-                this.i = value;
-            }
-        }
+        protected string MnemomicFormat { get; set; }
 
-        public IMemory Memory
-        {
-            get
-            {
-                return this.memory;
-            }
-        }
+        protected bool UsedAddress { get; set; }
 
-        public byte[] V
-        {
-            get
-            {
-                return this.v;
-            }
-        }
+        protected bool UsedOperand { get; set; }
 
-        public ushort[] Stack
-        {
-            get
-            {
-                return this.stack;
-            }
-        }
+        protected bool UsedN { get; set; }
 
-        public IGraphicsDevice Display
-        {
-            get
-            {
-                return this.display;
-            }
-        }
+        protected bool UsedX { get; set; }
 
-        public Configuration RuntimeConfiguration
-        {
-            get
-            {
-                return this.runtimeConfiguration;
-            }
-        }
-
-        protected string MnemomicFormat
-        {
-            get
-            {
-                return this.mnemomicFormat;
-            }
-
-            set
-            {
-                this.mnemomicFormat = value;
-            }
-        }
-
-        protected bool UsedAddress
-        {
-            get
-            {
-                return this.usedAddress;
-            }
-
-            set
-            {
-                this.usedAddress = value;
-            }
-        }
-
-        protected bool UsedOperand
-        {
-            get
-            {
-                return this.usedOperand;
-            }
-
-            set
-            {
-                this.usedOperand = value;
-            }
-        }
-
-        protected bool UsedN
-        {
-            get
-            {
-                return this.usedN;
-            }
-
-            set
-            {
-                this.usedN = value;
-            }
-        }
-
-        protected bool UsedX
-        {
-            get
-            {
-                return this.usedX;
-            }
-
-            set
-            {
-                this.usedX = value;
-            }
-        }
-
-        protected bool UsedY
-        {
-            get
-            {
-                return this.usedY;
-            }
-
-            set
-            {
-                this.usedY = value;
-            }
-        }
+        protected bool UsedY { get; set; }
 
         public virtual void Initialise()
         {
@@ -297,10 +112,10 @@
             Array.Clear(this.V, 0, this.V.Length);
 
             // Clear memory
-            this.memory.Clear();
+            this.Memory.Clear();
 
             // Load fonts
-            Array.Copy(standardFont, 0, this.Memory.Bus, StandardFontOffset, standardFont.Length);
+            Array.Copy(StandardFont, 0, this.Memory.Bus, StandardFontOffset, StandardFont.Length);
 
             // Reset timers
             this.delayTimer = this.soundTimer = 0;
@@ -332,30 +147,17 @@
 
         protected void OnBeepStarting()
         {
-            var handler = this.BeepStarting;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-
+            this.BeepStarting?.Invoke(this, EventArgs.Empty);
             this.SoundPlaying = true;
         }
 
         protected void OnBeepStopped()
         {
-           this.SoundPlaying = false;
-
-            var handler = this.BeepStopped;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
+            this.SoundPlaying = false;
+            this.BeepStopped?.Invoke(this, EventArgs.Empty);
         }
 
-        protected virtual void OnEmulatingCycle(ushort programCounter, ushort instruction, int address, int operand, int n, int x, int y)
-        {
-            this.OnEmulatingCycle();
-        }
+        protected virtual void OnEmulatingCycle(ushort programCounter, ushort instruction, int address, int operand, int n, int x, int y) => this.OnEmulatingCycle();
 
         protected virtual void OnEmulatedCycle(ushort programCounter, ushort instruction, int address, int operand, int n, int x, int y)
         {
@@ -398,32 +200,11 @@
             this.OnDisassembleInstruction(pre + post);
         }
 
-        protected virtual void OnDisassembleInstruction(string output)
-        {
-            var handler = this.DisassembleInstruction;
-            if (handler != null)
-            {
-                handler(this, new DisassemblyEventArgs(output));
-            }
-        }
+        protected virtual void OnDisassembleInstruction(string output) => this.DisassembleInstruction?.Invoke(this, new DisassemblyEventArgs(output));
 
-        protected virtual void OnEmulatingCycle()
-        {
-            var handler = this.EmulatingCycle;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-        }
+        protected virtual void OnEmulatingCycle() => this.EmulatingCycle?.Invoke(this, EventArgs.Empty);
 
-        protected virtual void OnEmulatedCycle()
-        {
-            var handler = this.EmulatedCycle;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-        }
+        protected virtual void OnEmulatedCycle() => this.EmulatedCycle?.Invoke(this, EventArgs.Empty);
 
         protected virtual void EmulateCycle()
         {
@@ -471,33 +252,33 @@
 
             switch (this.opcode & 0xf000)
             {
-                case 0x0000:    // Call
+                case 0x0000: // Call
                     return this.EmulateInstructions_0(nnn, nn, n, x, y);
 
                 // Jump
-                case 0x1000:        // 1NNN     Flow        goto NNN;
+                case 0x1000: // 1NNN     Flow        goto NNN;
                     return this.EmulateInstructions_1(nnn, nn, n, x, y);
 
                 // Call
-                case 0x2000:        // 2NNN     Flow        *(0xNNN)()
+                case 0x2000: // 2NNN     Flow        *(0xNNN)()
                     return this.EmulateInstructions_2(nnn, nn, n, x, y);
 
                 // Conditional
-                case 0x3000:        // 3XNN     Cond        if(Vx==NN)
+                case 0x3000: // 3XNN     Cond        if(Vx==NN)
                     return this.EmulateInstructions_3(nnn, nn, n, x, y);
 
                 // Conditional
-                case 0x4000:        // 4XNN     Cond        if(Vx!=NN)
+                case 0x4000: // 4XNN     Cond        if(Vx!=NN)
                     return this.EmulateInstructions_4(nnn, nn, n, x, y);
 
                 // Conditional
-                case 0x5000:        // 5XNN     Cond        if(Vx==Vy)
+                case 0x5000: // 5XNN     Cond        if(Vx==Vy)
                     return this.EmulateInstructions_5(nnn, nn, n, x, y);
 
-                case 0x6000:        // 6XNN     Const       Vx = NN
+                case 0x6000: // 6XNN     Const       Vx = NN
                     return this.EmulateInstructions_6(nnn, nn, n, x, y);
 
-                case 0x7000:        // 7XNN     Const       Vx += NN
+                case 0x7000: // 7XNN     Const       Vx += NN
                     return this.EmulateInstructions_7(nnn, nn, n, x, y);
 
                 case 0x8000:
@@ -506,16 +287,16 @@
                 case 0x9000:
                     return this.EmulateInstructions_9(nnn, nn, n, x, y);
 
-                case 0xa000:        // ANNN     MEM         I = NNN
+                case 0xa000: // ANNN     MEM         I = NNN
                     return this.EmulateInstructions_A(nnn, nn, n, x, y);
 
-                case 0xB000:        // BNNN     Flow        PC=V0+NNN
+                case 0xB000: // BNNN     Flow        PC=V0+NNN
                     return this.EmulateInstructions_B(nnn, nn, n, x, y);
 
-                case 0xc000:        // CXNN     Rand        Vx=rand()&NN
+                case 0xc000: // CXNN     Rand        Vx=rand()&NN
                     return this.EmulateInstructions_C(nnn, nn, n, x, y);
 
-                case 0xd000:        // DXYN     Disp        draw(Vx,Vy,N)
+                case 0xd000: // DXYN     Disp        draw(Vx,Vy,N)
                     return this.EmulateInstructions_D(nnn, nn, n, x, y);
 
                 case 0xe000:
@@ -534,43 +315,43 @@
             this.UsedX = true;
             switch (nn)
             {
-                case 0x07:  // FX07     Timer       Vx = get_delay()
+                case 0x07: // FX07     Timer       Vx = get_delay()
                     this.LD_Vx_DT(x);
                     break;
 
-                case 0x0a:  // FX0A     KeyOp       Vx = get_key()
+                case 0x0a: // FX0A     KeyOp       Vx = get_key()
                     this.LD_Vx_K(x);
                     break;
 
-                case 0x15:  // FX15     Timer       delay_timer(Vx)
+                case 0x15: // FX15     Timer       delay_timer(Vx)
                     this.LD_DT_Vx(x);
                     break;
 
-                case 0x18:  // FX18     Sound       sound_timer(Vx)
+                case 0x18: // FX18     Sound       sound_timer(Vx)
                     this.LD_ST_Vx(x);
                     break;
 
-                case 0x1e:  // FX1E     Mem         I +=Vx
+                case 0x1e: // FX1E     Mem         I +=Vx
                     this.ADD_I_Vx(x);
                     break;
 
-                case 0x29:  // FX29     Mem         I=sprite_addr[Vx]
+                case 0x29: // FX29     Mem         I=sprite_addr[Vx]
                     this.LD_F_Vx(x);
                     break;
 
-                case 0x33:  // FX33     BCD
-                            //                      set_BCD(Vx);
-                            //                      *(I+0)=BCD(3);
-                            //                      *(I+1)=BCD(2);
-                            //                      *(I+2)=BCD(1);
+                case 0x33: // FX33     BCD
+                           //                      set_BCD(Vx);
+                           //                      *(I+0)=BCD(3);
+                           //                      *(I+1)=BCD(2);
+                           //                      *(I+2)=BCD(1);
                     this.LD_B_Vx(x);
                     break;
 
-                case 0x55:  // FX55     MEM         reg_dump(Vx,&I)
+                case 0x55: // FX55     MEM         reg_dump(Vx,&I)
                     this.LD_II_Vx(x);
                     break;
 
-                case 0x65:  // FX65     MEM         reg_load(Vx,&I)
+                case 0x65: // FX65     MEM         reg_load(Vx,&I)
                     this.LD_Vx_II(x);
                     break;
 
@@ -586,11 +367,11 @@
             this.UsedX = true;
             switch (nn)
             {
-                case 0x9E:  // EX9E     KeyOp       if(key()==Vx)
+                case 0x9E: // EX9E     KeyOp       if(key()==Vx)
                     this.SKP(x);
                     break;
 
-                case 0xa1:  // EXA1     KeyOp       if(key()!=Vx)
+                case 0xa1: // EXA1     KeyOp       if(key()!=Vx)
                     this.SKNP(x);
                     break;
 
@@ -634,7 +415,7 @@
             this.UsedX = this.UsedY = true;
             switch (n)
             {
-                case 0:     // 9XY0     Cond        if(Vx!=Vy)
+                case 0: // 9XY0     Cond        if(Vx!=Vy)
                     this.SNE(x, y);
                     break;
 
@@ -650,39 +431,39 @@
             this.UsedX = this.UsedY = true;
             switch (n)
             {
-                case 0x0:   // 8XY0     Assign      Vx=Vy
+                case 0x0: // 8XY0     Assign      Vx=Vy
                     this.LD(x, y);
                     break;
 
-                case 0x1:   // 8XY1     BitOp       Vx=Vx|Vy
+                case 0x1: // 8XY1     BitOp       Vx=Vx|Vy
                     this.OR(x, y);
                     break;
 
-                case 0x2:   // 8XY2     BitOp       Vx=Vx&Vy
+                case 0x2: // 8XY2     BitOp       Vx=Vx&Vy
                     this.AND(x, y);
                     break;
 
-                case 0x3:   // 8XY3     BitOp       Vx=Vx^Vy
+                case 0x3: // 8XY3     BitOp       Vx=Vx^Vy
                     this.XOR(x, y);
                     break;
 
-                case 0x4:   // 8XY4     Math        Vx += Vy
+                case 0x4: // 8XY4     Math        Vx += Vy
                     this.ADD(x, y);
                     break;
 
-                case 0x5:   // 8XY5     Math        Vx -= Vy
+                case 0x5: // 8XY5     Math        Vx -= Vy
                     this.SUB(x, y);
                     break;
 
-                case 0x6:   // 8XY6     Math        Vx >> 1
+                case 0x6: // 8XY6     Math        Vx >> 1
                     this.SHR(x, y);
                     break;
 
-                case 0x7:   // 8XY7     Math        Vx=Vy-Vx
+                case 0x7: // 8XY7     Math        Vx=Vy-Vx
                     this.SUBN(x, y);
                     break;
 
-                case 0xe:   // 8XYE     Math        Vx << 1
+                case 0xe: // 8XYE     Math        Vx << 1
                     this.SHL(x, y);
                     break;
 
@@ -746,11 +527,11 @@
         {
             switch (nn)
             {
-                case 0xe0:  // 00E0     Display     disp_clear()
+                case 0xe0: // 00E0     Display     disp_clear()
                     this.CLS();
                     break;
 
-                case 0xee:  // 00EE     Flow        return;
+                case 0xee: // 00EE     Flow        return;
                     this.RET();
                     break;
 

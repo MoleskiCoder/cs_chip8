@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="XoChip.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
     using System.Globalization;
@@ -109,13 +113,13 @@
             var screenHeight = this.Display.Height;
 
             // Copy rows from top to bottom
-            for (int y = 0; y < (screenHeight - n); ++y)
+            for (var y = 0; y < (screenHeight - n); ++y)
             {
                 this.Display.CopyRow(y + n, y);
             }
 
             // Remove the bottommost rows, blanked by the scroll effect
-            for (int y = 0; y < n; ++y)
+            for (var y = 0; y < n; ++y)
             {
                 this.Display.ClearRow(screenHeight - y - 1);
             }

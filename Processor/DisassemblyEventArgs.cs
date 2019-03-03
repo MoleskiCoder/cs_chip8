@@ -1,22 +1,15 @@
-﻿namespace Processor
+﻿// <copyright file="DisassemblyEventArgs.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
 
     public class DisassemblyEventArgs : EventArgs
     {
-        private string output;
+        public DisassemblyEventArgs(string output) => this.Output = output;
 
-        public DisassemblyEventArgs(string output)
-        {
-            this.output = output;
-        }
-
-        public string Output
-        {
-            get
-            {
-                return this.output;
-            }
-        }
+        public string Output { get; }
     }
 }

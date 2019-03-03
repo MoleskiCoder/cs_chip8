@@ -1,4 +1,8 @@
-﻿namespace Emulator
+﻿// <copyright file="ConsoleDebugger.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Emulator
 {
     using System;
     using System.Collections.Generic;
@@ -36,10 +40,7 @@
             this.debugger.Exiting += this.Debugger_Exiting;
             this.debugger.BreakpointHit += this.Debugger_BreakpointHit;
 
-            var task = Task.Run(() =>
-            {
-                this.debugger.Run();
-            });
+            var task = Task.Run(() => this.debugger.Run());
 
             this.debuggerAvailable.WaitOne();
 
@@ -76,6 +77,7 @@
         public void Dispose()
         {
             this.Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected void Dispose(bool disposing)
@@ -84,30 +86,16 @@
             {
                 if (disposing)
                 {
-                    if (this.stepping != null)
-                    {
-                        this.stepping.Dispose();
-                    }
-
-                    if (this.debuggerAvailable != null)
-                    {
-                        this.debuggerAvailable.Dispose();
-                    }
-
-                    if (this.debugger != null)
-                    {
-                        this.debugger.Dispose();
-                    }
+                    this.stepping?.Dispose();
+                    this.debuggerAvailable?.Dispose();
+                    this.debugger?.Dispose();
                 }
 
                 this.disposed = true;
             }
         }
 
-        private void ShowState()
-        {
-            Console.WriteLine(this.BuildState());
-        }            
+        private void ShowState() => Console.WriteLine(this.BuildState());
 
         private string BuildState()
         {
@@ -116,7 +104,7 @@
 
             var registers = this.debugger.Processor.V;
             var registerValues = new string[registers.Length];
-            for (int i = 0; i < registers.Length; ++i)
+            for (var i = 0; i < registers.Length; ++i)
             {
                 registerValues[i] = string.Format(CultureInfo.InvariantCulture, "V{0:x1}={1:x2}", i, registers[i]);
             }
@@ -124,10 +112,7 @@
             return string.Format(CultureInfo.InvariantCulture, "{0} {1}", indexValue, string.Join(",", registerValues));
         }
 
-        private void Debugger_Loaded(object sender, EventArgs e)
-        {
-            this.debuggerAvailable.Set();
-        }
+        private void Debugger_Loaded(object sender, EventArgs e) => this.debuggerAvailable.Set();
 
         private void Debugger_Exiting(object sender, EventArgs e)
         {
@@ -135,10 +120,7 @@
             this.stepping.Set();
         }
 
-        private void Debugger_BreakpointHit(object sender, BreakpointHitEventArgs e)
-        {
-            this.stepping.Set();
-        }
+        private void Debugger_BreakpointHit(object sender, BreakpointHitEventArgs e) => this.stepping.Set();
 
         private void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {

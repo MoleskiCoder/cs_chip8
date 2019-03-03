@@ -1,8 +1,12 @@
-﻿namespace Emulator
+﻿// <copyright file="Program.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Emulator
 {
     using Processor;
 
-    internal class Program
+    internal static class Program
     {
         public static void Main()
         {
@@ -25,7 +29,7 @@
             ////var game = @"SGAMES\MINES";
             ////var game = @"SGAMES\PIPER";
             ////var game = @"SGAMES\RACE";
-            var game = @"SGAMES\SPACEFIG";
+            const string game = @"SGAMES\SPACEFIG";
             ////var game = @"SGAMES\SQUARE";
             ////var game = @"SGAMES\TEST";
             ////var game = @"SGAMES\UBOAT";

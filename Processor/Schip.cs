@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="Schip.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
 
@@ -6,7 +10,7 @@
     {
         private const int HighFontOffset = 0x110;
 
-        private static byte[] highFont =
+        private static readonly byte[] HighFont =
         {
             0x7C, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x7C, 0x00, // 0
             0x08, 0x18, 0x38, 0x08, 0x08, 0x08, 0x08, 0x08, 0x3C, 0x00, // 1
@@ -26,10 +30,6 @@
             0xFE, 0x80, 0x80, 0x80, 0xF8, 0x80, 0x80, 0x80, 0x80, 0x00, // F
         };
 
-        private readonly byte[] r = new byte[8]; // HP48 flags
-
-        private bool compatibility = false;
-
         public Schip(IMemory memory, IKeyboardDevice keyboard, IGraphicsDevice display, Configuration configuration)
         : base(memory, keyboard, display, configuration)
         {
@@ -39,31 +39,14 @@
 
         public event EventHandler<EventArgs> LowResolutionConfigured;
 
-        public byte[] R
-        {
-            get
-            {
-                return this.r;
-            }
-        }
+        public byte[] R { get; } = new byte[8];
 
-        protected bool Compatibility
-        {
-            get
-            {
-                return this.compatibility;
-            }
-
-            set
-            {
-                this.compatibility = value;
-            }
-        }
+        protected bool Compatibility { get; set; } = false;
 
         public override void Initialise()
         {
             base.Initialise();
-            Array.Copy(highFont, 0, this.Memory.Bus, HighFontOffset, highFont.Length);
+            Array.Copy(HighFont, 0, this.Memory.Bus, HighFontOffset, HighFont.Length);
         }
 
         protected void OnHighResolution()
@@ -71,11 +54,7 @@
             this.Display.HighResolution = true;
             this.Display.AllocateMemory();
 
-            var handler = this.HighResolutionConfigured;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
+            this.HighResolutionConfigured?.Invoke(this, EventArgs.Empty);
         }
 
         protected void OnLowResolution()
@@ -83,11 +62,7 @@
             this.Display.HighResolution = false;
             this.Display.AllocateMemory();
 
-            var handler = this.LowResolutionConfigured;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
+            this.LowResolutionConfigured?.Invoke(this, EventArgs.Empty);
         }
 
         protected override bool EmulateInstructions_F(int nnn, int nn, int n, int x, int y)
@@ -273,13 +248,13 @@
             var screenHeight = this.Display.Height;
 
             // Copy rows bottom to top
-            for (int y = screenHeight - n - 1; y >= 0; --y)
+            for (var y = screenHeight - n - 1; y >= 0; --y)
             {
                 this.Display.CopyRow(y, y + n);
             }
 
             // Remove the top columns, blanked by the scroll effect
-            for (int y = 0; y < n; ++y)
+            for (var y = 0; y < n; ++y)
             {
                 this.Display.ClearRow(y);
             }
@@ -310,16 +285,16 @@
             var screenWidth = this.Display.Width;
 
             // Scroll distance
-            var n = 4;
+            const int n = 4;
 
             // Copy colummns from right to left
-            for (int x = screenWidth - n - 1; x >= 0; --x)
+            for (var x = screenWidth - n - 1; x >= 0; --x)
             {
                 this.Display.CopyColumn(x, x + n);
             }
 
             // Remove the leftmost columns, blanked by the scroll effect
-            for (int x = 0; x < n; ++x)
+            for (var x = 0; x < n; ++x)
             {
                 this.Display.ClearColumn(x);
             }
@@ -339,16 +314,16 @@
             var screenWidth = this.Display.Width;
 
             // Scroll distance
-            var n = 4;
+            const int n = 4;
 
             // Copy columns from left to right
-            for (int x = 0; x < (screenWidth - n); ++x)
+            for (var x = 0; x < (screenWidth - n); ++x)
             {
                 this.Display.CopyColumn(x + n, x);
             }
 
             // Remove the rightmost columns, blanked by the scroll effect
-            for (int x = 0; x < n; ++x)
+            for (var x = 0; x < n; ++x)
             {
                 this.Display.ClearColumn(screenWidth - x - 1);
             }

@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="Controller.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
     using System.Media;
@@ -7,7 +11,7 @@
     using Microsoft.Xna.Framework.Graphics;
     using Microsoft.Xna.Framework.Input;
 
-    public class Controller : Game, IDisposable
+    public class Controller : Game
     {
         private const Keys ToggleKey = Keys.F12;
 
@@ -19,9 +23,6 @@
         private readonly SoundPlayer soundPlayer = new SoundPlayer();
 
         private readonly MonoGameColourPalette palette;
-
-        private readonly Chip8 processor;
-
         private SpriteBatch spriteBatch;
 
         private bool wasToggleKeyPressed;
@@ -30,33 +31,20 @@
 
         public Controller(Chip8 processor, string game)
         {
-            this.processor = processor;
+            this.Processor = processor;
             this.game = game;
-            this.graphics = new GraphicsDeviceManager(this);
-            this.graphics.IsFullScreen = false;
-            this.palette = new MonoGameColourPalette(this.processor.Display);
-        }
-
-        public Chip8 Processor
-        {
-            get
+            this.graphics = new GraphicsDeviceManager(this)
             {
-                return this.processor;
-            }
+                IsFullScreen = false,
+            };
+            this.palette = new MonoGameColourPalette(this.Processor.Display);
         }
 
-        private int PixelSize
-        {
-            get
-            {
-                return this.processor.Display.HighResolution ? PixelSizeHigh : PixelSizeLow;
-            }
-        }
+        public Chip8 Processor { get; }
 
-        public void Stop()
-        {
-            this.processor.Finished = true;
-        }
+        private int PixelSize => this.Processor.Display.HighResolution ? PixelSizeHigh : PixelSizeLow;
+
+        public void Stop() => this.Processor.Finished = true;
 
         protected override void Dispose(bool disposing)
         {
@@ -65,25 +53,10 @@
             {
                 if (disposing)
                 {
-                    if (this.soundPlayer != null)
-                    {
-                        this.soundPlayer.Dispose();
-                    }
-
-                    if (this.graphics != null)
-                    {
-                        this.graphics.Dispose();
-                    }
-
-                    if (this.palette != null)
-                    {
-                        this.palette.Dispose();
-                    }
-
-                    if (this.spriteBatch != null)
-                    {
-                        this.spriteBatch.Dispose();
-                    }
+                    this.soundPlayer?.Dispose();
+                    this.graphics?.Dispose();
+                    this.palette?.Dispose();
+                    this.spriteBatch?.Dispose();
                 }
 
                 this.disposed = true;
@@ -100,32 +73,31 @@
 
             this.SetLowResolution();
 
-            var schip = this.processor as Schip;
-            if (schip != null)
+            if (this.Processor is Schip schip)
             {
                 schip.HighResolutionConfigured += this.Processor_HighResolution;
                 schip.LowResolutionConfigured += this.Processor_LowResolution;
             }
 
-            this.processor.BeepStarting += this.Processor_BeepStarting;
-            this.processor.BeepStopped += this.Processor_BeepStopped;
+            this.Processor.BeepStarting += this.Processor_BeepStarting;
+            this.Processor.BeepStopped += this.Processor_BeepStopped;
 
-            this.processor.Initialise();
+            this.Processor.Initialise();
 
-            this.processor.LoadGame(this.game);
+            this.Processor.LoadGame(this.game);
         }
 
         protected override void Update(GameTime gameTime)
         {
             this.RunFrame();
-            this.processor.UpdateTimers();
+            this.Processor.UpdateTimers();
             this.CheckFullScreen();
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
-            if (this.processor.DrawNeeded)
+            if (this.Processor.DrawNeeded)
             {
                 try
                 {
@@ -134,7 +106,7 @@
                 }
                 finally
                 {
-                    this.processor.DrawNeeded = false;
+                    this.Processor.DrawNeeded = false;
                 }
             }
 
@@ -143,47 +115,47 @@
 
         protected virtual void RunFrame()
         {
-            for (int i = 0; i < this.processor.RuntimeConfiguration.CyclesPerFrame; ++i)
+            for (var i = 0; i < this.Processor.RuntimeConfiguration.CyclesPerFrame; ++i)
             {
                 if (this.RunCycle())
                 {
                     break;
                 }
 
-                this.processor.Step();
+                this.Processor.Step();
             }
         }
 
         protected virtual bool RunCycle()
         {
-            if (this.processor.Finished)
+            if (this.Processor.Finished)
             {
                 this.Exit();
             }
 
-            return this.processor.Display.LowResolution && this.processor.DrawNeeded;
+            return this.Processor.Display.LowResolution && this.Processor.DrawNeeded;
         }
 
         private void Draw()
         {
             var pixelSize = this.PixelSize;
-            var screenWidth = this.processor.Display.Width;
-            var screenHeight = this.processor.Display.Height;
+            var screenWidth = this.Processor.Display.Width;
+            var screenHeight = this.Processor.Display.Height;
 
-            var source = this.processor.Display.Graphics;
-            var numberOfPlanes = this.processor.Display.NumberOfPlanes;
+            var source = this.Processor.Display.Graphics;
+            var numberOfPlanes = this.Processor.Display.NumberOfPlanes;
 
             this.spriteBatch.Begin();
             try
             {
-                for (int y = 0; y < screenHeight; y++)
+                for (var y = 0; y < screenHeight; y++)
                 {
                     var rowOffset = y * screenWidth;
                     var rectanglePositionY = y * pixelSize;
-                    for (int x = 0; x < screenWidth; x++)
+                    for (var x = 0; x < screenWidth; x++)
                     {
-                        int colourIndex = 0;
-                        for (int plane = 0; plane < numberOfPlanes; ++plane)
+                        var colourIndex = 0;
+                        for (var plane = 0; plane < numberOfPlanes; ++plane)
                         {
                             var bit = source[plane][x + rowOffset];
                             colourIndex |= Convert.ToByte(bit) << plane;
@@ -216,25 +188,13 @@
             this.wasToggleKeyPressed = toggleKeyPressed;
         }
 
-        private void Processor_BeepStarting(object sender, EventArgs e)
-        {
-            this.soundPlayer.PlayLooping();
-        }
+        private void Processor_BeepStarting(object sender, EventArgs e) => this.soundPlayer.PlayLooping();
 
-        private void Processor_BeepStopped(object sender, EventArgs e)
-        {
-            this.soundPlayer.Stop();
-        }
+        private void Processor_BeepStopped(object sender, EventArgs e) => this.soundPlayer.Stop();
 
-        private void Processor_LowResolution(object sender, System.EventArgs e)
-        {
-            this.SetLowResolution();
-        }
+        private void Processor_LowResolution(object sender, System.EventArgs e) => this.SetLowResolution();
 
-        private void Processor_HighResolution(object sender, System.EventArgs e)
-        {
-            this.SetHighResolution();
-        }
+        private void Processor_HighResolution(object sender, System.EventArgs e) => this.SetHighResolution();
 
         private void ChangeResolution(int width, int height)
         {
@@ -243,14 +203,8 @@
             this.graphics.ApplyChanges();
         }
 
-        private void SetLowResolution()
-        {
-            this.ChangeResolution(BitmappedGraphics.ScreenWidthLow, BitmappedGraphics.ScreenHeightLow);
-        }
+        private void SetLowResolution() => this.ChangeResolution(BitmappedGraphics.ScreenWidthLow, BitmappedGraphics.ScreenHeightLow);
 
-        private void SetHighResolution()
-        {
-            this.ChangeResolution(BitmappedGraphics.ScreenWidthHigh, BitmappedGraphics.ScreenHeightHigh);
-        }
+        private void SetHighResolution() => this.ChangeResolution(BitmappedGraphics.ScreenWidthHigh, BitmappedGraphics.ScreenHeightHigh);
     }
 }

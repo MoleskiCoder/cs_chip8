@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="Debugger.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
     using System.Collections.Generic;
@@ -6,9 +10,6 @@
     public class Debugger : Controller
     {
         private readonly Dictionary<ushort, bool> breakpoints = new Dictionary<ushort, bool>();
-        private bool stepping = true;
-        private bool cycle = false;
-        private bool framed = false;
 
         public Debugger(Chip8 processor, string game)
         : base(processor, game)
@@ -21,101 +22,35 @@
 
         public event EventHandler<BreakpointHitEventArgs> BreakpointHit;
 
-        public bool Stepping
-        {
-            get
-            {
-                return this.stepping;
-            }
-        }
+        public bool Stepping { get; private set; } = true;
 
-        public bool Cycle
-        {
-            get
-            {
-                return this.cycle;
-            }
-        }
+        public bool Cycle { get; private set; } = false;
 
-        public bool Framed
-        {
-            get
-            {
-                return this.framed;
-            }
-        }
+        public bool Framed { get; private set; } = false;
 
-        public void Break()
-        {
-            this.stepping = true;
-        }
+        public void Break() => this.Stepping = true;
 
-        public void Continue()
-        {
-            this.stepping = false;
-        }
+        public void Continue() => this.Stepping = false;
 
-        public void Step()
-        {
-            this.cycle = true;
-        }
+        public void Step() => this.Cycle = true;
 
-        public void AddBreakpoint(ushort address)
-        {
-            this.breakpoints[address] = false;
-        }
+        public void AddBreakpoint(ushort address) => this.breakpoints[address] = false;
 
-        public void AddTemporaryBreakpoint(ushort address)
-        {
-            this.breakpoints[address] = true;
-        }
+        public void AddTemporaryBreakpoint(ushort address) => this.breakpoints[address] = true;
 
-        public void RemoveBreakpoint(ushort address)
-        {
-            this.breakpoints.Remove(address);
-        }
+        public void RemoveBreakpoint(ushort address) => this.breakpoints.Remove(address);
 
-        public void RemoveBreakpoints()
-        {
-            this.breakpoints.Clear();
-        }
+        public void RemoveBreakpoints() => this.breakpoints.Clear();
 
-        public byte GetContents(ushort address)
-        {
-            return this.Processor.Memory.Get(address);
-        }
+        public byte GetContents(ushort address) => this.Processor.Memory.Get(address);
 
-        public byte GetRegisterContents(int register)
-        {
-            return this.Processor.V[register];
-        }
+        public byte GetRegisterContents(int register) => this.Processor.V[register];
 
-        protected void OnLoading()
-        {
-            var handler = this.Loading;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-       }
+        protected void OnLoading() => this.Loading?.Invoke(this, EventArgs.Empty);
 
-        protected void OnLoaded()
-        {
-            var handler = this.Loaded;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-        }
+        protected void OnLoaded() => this.Loaded?.Invoke(this, EventArgs.Empty);
 
-        protected void OnBreakpointHit()
-        {
-            var handler = this.BreakpointHit;
-            if (handler != null)
-            {
-                handler(this, new BreakpointHitEventArgs());
-            }
-        }
+        protected void OnBreakpointHit() => this.BreakpointHit?.Invoke(this, new BreakpointHitEventArgs());
 
         protected override void LoadContent()
         {
@@ -132,10 +67,10 @@
 
         protected override void RunFrame()
         {
-            this.framed = true;
+            this.Framed = true;
             try
             {
-                if (this.stepping)
+                if (this.Stepping)
                 {
                     this.RunSingleStepFrame();
                 }
@@ -146,16 +81,16 @@
             }
             finally
             {
-                this.framed = false;
+                this.Framed = false;
             }
         }
 
         private void RunNormalFrame()
         {
-            for (int i = 0; !this.stepping && (i < this.Processor.RuntimeConfiguration.CyclesPerFrame); ++i)
+            for (var i = 0; !this.Stepping && (i < this.Processor.RuntimeConfiguration.CyclesPerFrame); ++i)
             {
-                this.stepping = this.CheckBreakpoint(this.Processor.PC);
-                if (!this.stepping)
+                this.Stepping = this.CheckBreakpoint(this.Processor.PC);
+                if (!this.Stepping)
                 {
                     if (this.RunCycle())
                     {
@@ -169,7 +104,7 @@
 
         private void RunSingleStepFrame()
         {
-            if (this.cycle)
+            if (this.Cycle)
             {
                 try
                 {
@@ -178,15 +113,14 @@
                 }
                 finally
                 {
-                    this.cycle = false;
+                    this.Cycle = false;
                 }
             }
         }
 
         private bool CheckBreakpoint(ushort address)
         {
-            bool temporary;
-            if (this.breakpoints.TryGetValue(address, out temporary))
+            if (this.breakpoints.TryGetValue(address, out var temporary))
             {
                 if (temporary)
                 {

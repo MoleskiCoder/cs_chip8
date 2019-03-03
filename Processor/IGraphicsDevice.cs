@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="IGraphicsDevice.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     public interface IGraphicsDevice
     {

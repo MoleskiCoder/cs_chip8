@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="MonoGameColourPalette.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
     using Microsoft.Xna.Framework;
@@ -7,61 +11,46 @@
     public class MonoGameColourPalette : IDisposable
     {
         private readonly IGraphicsDevice device;
-        private readonly Color[] colours;
-        private readonly Texture2D[] pixels;
-
         private bool disposed = false;
 
         public MonoGameColourPalette(IGraphicsDevice device)
         {
             this.device = device;
 
-            this.colours = new Color[this.device.NumberOfColours];
+            this.Colours = new Color[this.device.NumberOfColours];
 
             // One less than the number of colours, since we don't bother holding a background pixel.
-            this.pixels = new Texture2D[this.device.NumberOfColours - 1];
+            this.Pixels = new Texture2D[this.device.NumberOfColours - 1];
         }
 
-        public Color[] Colours
-        {
-            get
-            {
-                return this.colours;
-            }
-        }
+        public Color[] Colours { get; }
 
-        public Texture2D[] Pixels
-        {
-            get
-            {
-                return this.pixels;
-            }
-        }
+        public Texture2D[] Pixels { get; }
 
         public void Load(GraphicsDevice hardware)
         {
             switch (this.device.NumberOfPlanes)
             {
                 case 1:
-                    this.colours[0] = Color.Black;
-                    this.colours[1] = Color.White;
+                    this.Colours[0] = Color.Black;
+                    this.Colours[1] = Color.White;
                     break;
 
                 case 2:
-                    this.colours[0] = Color.Black;
-                    this.colours[1] = Color.Red;
-                    this.colours[2] = Color.Yellow;
-                    this.colours[3] = Color.White;
+                    this.Colours[0] = Color.Black;
+                    this.Colours[1] = Color.Red;
+                    this.Colours[2] = Color.Yellow;
+                    this.Colours[3] = Color.White;
                     break;
 
                 default:
                     throw new InvalidOperationException("Undefined number of graphics bit planes in use.");
             }
 
-            for (int i = 1; i < this.device.NumberOfColours; ++i)
+            for (var i = 1; i < this.device.NumberOfColours; ++i)
             {
-                this.pixels[i - 1] = new Texture2D(hardware, 1, 1);
-                this.pixels[i - 1].SetData<Color>(new Color[] { this.colours[i] });
+                this.Pixels[i - 1] = new Texture2D(hardware, 1, 1);
+                this.Pixels[i - 1].SetData<Color>(new Color[] { this.Colours[i] });
             }
         }
 
@@ -77,9 +66,9 @@
             {
                 if (disposing)
                 {
-                    if (this.pixels != null)
+                    if (this.Pixels != null)
                     {
-                        foreach (var pixel in this.pixels)
+                        foreach (var pixel in this.Pixels)
                         {
                             pixel.Dispose();
                         }

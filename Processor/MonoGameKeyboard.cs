@@ -1,4 +1,8 @@
-﻿namespace Processor
+﻿// <copyright file="MonoGameKeyboard.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using Microsoft.Xna.Framework.Input;
 
@@ -12,7 +16,7 @@
         private readonly Keys[] mapping = new Keys[]
         {
                         Keys.X,
-                
+
             Keys.D1,    Keys.D2,    Keys.D3,
             Keys.Q,     Keys.W,     Keys.E,
             Keys.A,     Keys.S,     Keys.D,
@@ -22,14 +26,14 @@
                                                 Keys.D4,
                                                 Keys.R,
                                                 Keys.F,
-                                                Keys.V
+                                                Keys.V,
         };
 
         public bool CheckKeyPress(out int key)
         {
             key = -1;
             var state = Keyboard.GetState();
-            for (int idx = 0; idx < this.mapping.Length; idx++)
+            for (var idx = 0; idx < this.mapping.Length; idx++)
             {
                 if (state.IsKeyDown(this.mapping[idx]))
                 {
@@ -41,9 +45,6 @@
             return false;
         }
 
-        public bool IsKeyPressed(int key)
-        {
-            return Keyboard.GetState().IsKeyDown(this.mapping[key]);
-        }
+        public bool IsKeyPressed(int key) => Keyboard.GetState().IsKeyDown(this.mapping[key]);
     }
 }

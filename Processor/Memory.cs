@@ -1,28 +1,18 @@
-﻿namespace Processor
+﻿// <copyright file="Memory.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     using System;
 
     public class Memory : IMemory
     {
-        private readonly byte[] bus;
+        public Memory(int size) => this.Bus = new byte[size];
 
-        public Memory(int size)
-        {
-            this.bus = new byte[size];
-        }
+        public byte[] Bus { get; }
 
-        public byte[] Bus
-        {
-            get
-            {
-                return this.bus;
-            }
-        }
-
-        public byte Get(int address)
-        {
-            return this.bus[address];
-        }
+        public byte Get(int address) => this.Bus[address];
 
         public ushort GetWord(int address)
         {
@@ -31,14 +21,8 @@
             return (ushort)((high << 8) + low);
         }
 
-        public void Set(int address, byte value)
-        {
-            this.bus[address] = value;
-        }
+        public void Set(int address, byte value) => this.Bus[address] = value;
 
-        public void Clear()
-        {
-            Array.Clear(this.bus, 0, this.bus.Length);
-        }
+        public void Clear() => Array.Clear(this.Bus, 0, this.Bus.Length);
     }
 }

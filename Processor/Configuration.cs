@@ -1,44 +1,18 @@
-﻿namespace Processor
+﻿// <copyright file="Configuration.cs" company="Adrian Conlon">
+// Copyright (c) Adrian Conlon. All rights reserved.
+// </copyright>
+
+namespace Processor
 {
     public class Configuration
     {
-        private ProcessorLevel type = ProcessorLevel.Chip8;
-        private bool allowMisalignedOpcodes = false;
-        private int cyclesPerFrame = 13;
-        private ushort startAddress = 0x200;
-        private ushort loadAddress = 0x200;
-        private int memorySize = 4096;
-        private int graphicPlanes = 1;
-
         public Configuration()
         {
         }
 
-        public ProcessorLevel Type
-        {
-            get
-            {
-                return this.type;
-            }
+        public ProcessorLevel Type { get; set; } = ProcessorLevel.Chip8;
 
-            set
-            {
-                this.type = value;
-            }
-        }
-
-        public bool AllowMisalignedOpcodes
-        {
-            get
-            {
-                return this.allowMisalignedOpcodes;
-            }
-
-            set
-            {
-                this.allowMisalignedOpcodes = value;
-            }
-        }
+        public bool AllowMisalignedOpcodes { get; set; } = false;
 
         // https://github.com/Chromatophore/HP48-Superchip#platform-speed
         // The HP48 calculator is much faster than the Cosmac VIP, but,
@@ -50,76 +24,23 @@
         // However graphical ops are significantly more costly than other ops on period
         // hardware versus Octo (where they are basically free) and as a result a raw
         // computational cycles/second speed assessment still has not been completed.
-        public int CyclesPerFrame
-        {
-            get
-            {
-                return this.cyclesPerFrame;
-            }
+        public int CyclesPerFrame { get; set; } = 13;
 
-            set
-            {
-                this.cyclesPerFrame = value;
-            }
-        }
+        public ushort StartAddress { get; set; } = 0x200;
 
-        public ushort StartAddress
-        {
-            get
-            {
-                return this.startAddress;
-            }
+        public ushort LoadAddress { get; set; } = 0x200;
 
-            set
-            {
-                this.startAddress = value;
-            }
-        }
+        public int MemorySize { get; set; } = 4096;
 
-        public ushort LoadAddress
-        {
-            get
-            {
-                return this.loadAddress;
-            }
-
-            set
-            {
-                this.loadAddress = value;
-            }
-        }
-
-        public int MemorySize
-        {
-            get
-            {
-                return this.memorySize;
-            }
-
-            set
-            {
-                this.memorySize = value;
-            }
-        }
-
-        public int GraphicPlanes
-        {
-            get
-            {
-                return this.graphicPlanes;
-            }
-
-            set
-            {
-                this.graphicPlanes = value;
-            }
-        }
+        public int GraphicPlanes { get; set; } = 1;
 
         public static Configuration BuildSuperChipConfiguration()
         {
-            var configuration = new Configuration();
-            configuration.Type = ProcessorLevel.SuperChip;
-            configuration.CyclesPerFrame = 22;
+            var configuration = new Configuration
+            {
+                Type = ProcessorLevel.SuperChip,
+                CyclesPerFrame = 22,
+            };
             return configuration;
         }
 
